@@ -1,0 +1,50 @@
+//  1: 'is_inner_bptree_node' (inner node of B+-tree).
+//
+//  2: 'has_refs' (elements whose first bit is zero are refs to subarrays).
+//
+//  3: 'context_flag' (meaning depends on context)
+//
+//  4: 'width_scheme' (2 bits)
+//
+//      value  |  meaning of 'width'  |  number of bytes used after header
+//      -------|----------------------|------------------------------------
+//        0    |  number of bits      |  ceil(width * size / 8)
+//        1    |  number of bytes     |  width * size
+//        2    |  ignored             |  size
+//
+//  5: 'width_ndx' (3 bits)
+//
+//      'width_ndx'       |  0 |  1 |  2 |  3 |  4 |  5 |  6 |  7 |
+//      ------------------|----|----|----|----|----|----|----|----|
+//      value of 'width'  |  0 |  1 |  2 |  4 |  8 | 16 | 32 | 64 |
+
+   01000110
+   0 1 0 00 010
+-> 1 2 3 44 555
+
+1 = 0
+-> is_inner_bptree_node = false
+
+2 = 1
+-> has_refs = true
+
+3 = 1
+-> context_flag = true
+
+4 = 0
+-> width_scheme = 0 = number of bits
+
+5 = 4
+-> width_ndx = 4 = 16 bits
+
+   00001111
+   12344555
+
+  inner = false
+  refs = false
+  context = false
+  width_scheme = 1 = number of bytes
+  width_ndx = 7
+  width = 64 bytes
+
+
