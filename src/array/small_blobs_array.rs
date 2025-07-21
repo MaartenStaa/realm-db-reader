@@ -10,7 +10,6 @@ use crate::realm::Realm;
 
 #[derive(Debug)]
 pub struct SmallBlobsArray {
-    array: Array,
     lengths: Array,
     blobs: Array,
     null: Option<Array>,
@@ -21,8 +20,8 @@ impl Node for SmallBlobsArray {
         let array = Array::from_ref(realm, ref_)?;
 
         let size = array.node.header.size as usize;
-        assert!(size >= 2);
-        assert!(size <= 3);
+        assert!(size >= 2, "SmallBlobsArray size must be at least 2");
+        assert!(size <= 3, "SmallBlobsArray size must be at most 3");
 
         let lengths_array: Array = array.get_node(0)?;
         let blobs_array: Array = array.get_node(1)?;
@@ -37,7 +36,6 @@ impl Node for SmallBlobsArray {
         }
 
         Ok(Self {
-            array,
             lengths: lengths_array,
             blobs: blobs_array,
             null: null_array,
@@ -69,23 +67,6 @@ impl SmallBlobsArray {
             self.lengths.get(index - 1) as usize
         };
         let end = self.lengths.get(index) as usize;
-
-        warn!(target: "SmallBlobsArray", "get: index={index} begin={begin} end={end}");
-
-        // if end >= self.blobs.node.payload.len() {
-        //     warn!(
-        //         "Blob end index out of bounds: {end} >= {}",
-        //         self.blobs.node.payload.len()
-        //     );
-        //     // FIXME!
-        //     return None; // Out of bounds
-        // }
-
-        // if end - 1 <= begin {
-        //     warn!("Invalid blob length: end ({end}) <= begin ({begin})");
-        //     // FIXME!
-        //     return None; // Invalid length
-        // }
 
         assert!(
             end > begin,
