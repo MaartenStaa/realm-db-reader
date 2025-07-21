@@ -31,6 +31,10 @@ impl Node for LongBlobsArray {
 }
 
 impl LongBlobsArray {
+    pub fn element_count(&self) -> usize {
+        self.array.node.header.size as usize
+    }
+
     #[instrument(target = "LongBlobsArray")]
     pub fn get(&self, index: usize) -> anyhow::Result<Option<Vec<u8>>> {
         let Some(ref_) = self.array.get_ref(index) else {

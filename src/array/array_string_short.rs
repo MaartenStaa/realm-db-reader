@@ -35,6 +35,10 @@ impl<T> Node for ArrayStringShort<T> {
 }
 
 impl<T> ArrayStringShort<T> {
+    pub fn element_count(&self) -> usize {
+        self.array.node.header.size as usize
+    }
+
     #[instrument(target = "ArrayStringShort")]
     pub fn get(&self, index: usize) -> Option<&str> {
         Self::get_static(&self.array, index)

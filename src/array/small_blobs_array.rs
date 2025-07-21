@@ -44,7 +44,7 @@ impl Node for SmallBlobsArray {
 }
 
 impl SmallBlobsArray {
-    pub fn blobs_count(&self) -> usize {
+    pub fn element_count(&self) -> usize {
         self.lengths.node.header.size as usize
     }
 

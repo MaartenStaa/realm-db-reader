@@ -73,6 +73,14 @@ impl<T> Node for ArrayString<T> {
 }
 
 impl<T> ArrayString<T> {
+    pub fn element_count(&self) -> usize {
+        match &self.inner {
+            ArrayStringInner::Short(short) => short.element_count(),
+            ArrayStringInner::SmallBlobs(small_blobs) => small_blobs.element_count(),
+            ArrayStringInner::LongBlobs(long_blobs) => long_blobs.element_count(),
+        }
+    }
+
     #[instrument(target = "ArrayString")]
     fn get_inner(&self, index: usize) -> anyhow::Result<Option<String>> {
         match &self.inner {

@@ -291,6 +291,28 @@ impl Table {
         }
     }
 
+    pub fn row_count(&self) -> anyhow::Result<usize> {
+        let first_column = &self.header.columns[0];
+        let first_column_type = first_column.as_column_type();
+
+        match first_column_type {
+            ColumnType::Int | ColumnType::Bool => {
+                let array: IntegerArray<u64> = self.data_array.get_node(0)?;
+                Ok(array.element_count())
+            }
+            ColumnType::String => {
+                let array: ArrayString<String> = self.data_array.get_node(0)?;
+                Ok(array.element_count())
+            }
+            _ => {
+                unimplemented!(
+                    "Unsupported column type for row count: {:?}",
+                    first_column_type
+                );
+            }
+        }
+    }
+
     #[instrument(target = "Table")]
     pub fn get_row(&mut self, index: usize) -> anyhow::Result<&[Value]> {
         if self.data_rows.len() > index && self.data_rows[index].is_some() {

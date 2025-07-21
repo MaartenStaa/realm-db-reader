@@ -34,6 +34,10 @@ impl<T> IntegerArray<T> {
             phantom: PhantomData,
         }
     }
+
+    pub fn element_count(&self) -> usize {
+        self.array.node.header.size as usize
+    }
 }
 
 macro_rules! integer_array_impl {
