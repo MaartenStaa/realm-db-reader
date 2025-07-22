@@ -1,7 +1,7 @@
 use log::warn;
 use tracing::instrument;
 
-use crate::array::{Array, ArrayStringShort};
+use crate::array::{ArrayBasic, ArrayStringShort};
 use crate::build::Build;
 use crate::table::Table;
 
@@ -43,14 +43,14 @@ use crate::table::Table;
 #[derive(Debug)]
 pub struct Group {
     // group_array: Array<'a>,
-    tables_array: Array,
+    tables_array: ArrayBasic,
     table_names: Vec<String>,
     tables: Vec<Option<Table>>,
 }
 
 impl Build for Group {
     #[instrument(target = "Group")]
-    fn build(array: Array) -> anyhow::Result<Self> {
+    fn build(array: ArrayBasic) -> anyhow::Result<Self> {
         let table_names = {
             let array: ArrayStringShort<String> = array.get_node(0)?;
             array.get_strings()
@@ -69,12 +69,12 @@ impl Build for Group {
 }
 
 impl Group {
-    #[instrument(target = "Group")]
+    #[instrument(target = "Group", skip(self), fields(table_names = ?self.table_names))]
     pub fn get_table(&mut self, index: usize) -> anyhow::Result<&Table> {
         Ok(&*self.get_or_load_table(index)?)
     }
 
-    #[instrument(target = "Group")]
+    #[instrument(target = "Group", skip(self), fields(table_names = ?self.table_names))]
     pub fn get_table_by_name(&mut self, name: &str) -> anyhow::Result<&Table> {
         let index = self
             .table_names
@@ -85,12 +85,12 @@ impl Group {
         Ok(&*self.get_or_load_table(index)?)
     }
 
-    #[instrument(target = "Group")]
+    #[instrument(target = "Group", skip(self), fields(table_names = ?self.table_names))]
     pub fn get_table_mut(&mut self, index: usize) -> anyhow::Result<&mut Table> {
         self.get_or_load_table(index)
     }
 
-    #[instrument(target = "Group")]
+    #[instrument(target = "Group", skip(self), fields(table_names = ?self.table_names))]
     pub fn get_table_by_name_mut(&mut self, name: &str) -> anyhow::Result<&mut Table> {
         let index = self
             .table_names
@@ -101,7 +101,7 @@ impl Group {
         self.get_or_load_table(index)
     }
 
-    #[instrument(target = "Group")]
+    #[instrument(target = "Group", skip(self), fields(table_names = ?self.table_names))]
     fn get_or_load_table(&mut self, index: usize) -> anyhow::Result<&mut Table> {
         if self.tables[index].is_some() {
             return Ok(self.tables[index].as_mut().unwrap());

@@ -2,22 +2,23 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use crate::array::{Array, RealmRef};
+use crate::array::RealmRef;
 use crate::node::Node;
-use crate::realm::Realm;
+use crate::realm::{Realm, RealmNode};
 use log::debug;
 use std::str;
 use tracing::instrument;
 
+#[derive(Clone)]
 pub struct ArrayStringShort<T> {
-    array: Array,
+    node: RealmNode,
     str_type: PhantomData<T>,
 }
 
 impl<T> Debug for ArrayStringShort<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ArrayStringShort")
-            .field("array", &self.array)
+            .field("node", &self.node)
             .finish()
     }
 }
@@ -25,10 +26,10 @@ impl<T> Debug for ArrayStringShort<T> {
 impl<T> Node for ArrayStringShort<T> {
     // #[instrument(target = "ArrayStringShort")]
     fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
-        let array = Array::from_ref(realm, ref_)?;
+        let node = RealmNode::from_ref(realm, ref_)?;
 
         Ok(Self {
-            array,
+            node,
             str_type: PhantomData,
         })
     }
@@ -36,23 +37,23 @@ impl<T> Node for ArrayStringShort<T> {
 
 impl<T> ArrayStringShort<T> {
     pub fn element_count(&self) -> usize {
-        self.array.node.header.size as usize
+        self.node.header.size as usize
     }
 
     #[instrument(target = "ArrayStringShort")]
     pub fn get(&self, index: usize) -> Option<&str> {
-        Self::get_static(&self.array, index)
+        Self::get_static(&self.node, index)
     }
 
     #[instrument(target = "ArrayStringShort")]
-    pub fn get_static(array: &Array, index: usize) -> Option<&str> {
-        let width = array.node.header.width() as usize;
+    pub fn get_static(node: &RealmNode, index: usize) -> Option<&str> {
+        let width = node.header.width() as usize;
         if width == 0 {
             debug!("get: width is 0, returning None");
             return None;
         }
 
-        let element_data = &array.node.payload()[index * width..(index + 1) * width];
+        let element_data = &node.payload()[index * width..(index + 1) * width];
         let zeroes = element_data[width - 1] as usize;
         if zeroes == width {
             return None;
@@ -71,7 +72,7 @@ impl<T> ArrayStringShort<T> {
 impl ArrayStringShort<String> {
     #[instrument(target = "ArrayStringShort")]
     pub fn get_strings(&self) -> Vec<String> {
-        (0..self.array.node.header.size as usize)
+        (0..self.node.header.size as usize)
             .map(|i| self.get(i).map(|s| s.to_string()).unwrap_or_default())
             .collect()
     }
@@ -81,7 +82,7 @@ impl ArrayStringShort<String> {
 impl ArrayStringShort<Option<String>> {
     #[instrument(target = "ArrayStringShort")]
     pub fn get_strings(&self) -> Vec<Option<String>> {
-        (0..self.array.node.header.size as usize)
+        (0..self.node.header.size as usize)
             .map(|i| self.get(i).map(|s| s.to_string()))
             .collect()
     }
@@ -91,7 +92,7 @@ impl ArrayStringShort<Option<String>> {
 impl ArrayStringShort<&str> {
     #[instrument(target = "ArrayStringShort")]
     pub fn get_strings(&self) -> Vec<&str> {
-        (0..self.array.node.header.size as usize)
+        (0..self.node.header.size as usize)
             .map(|i| self.get(i).unwrap_or_default())
             .collect()
     }

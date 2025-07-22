@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use tracing::instrument;
 
-use crate::array::{Array, RealmRef};
+use crate::array::{ArrayBasic, RealmRef};
 use crate::node::Node;
 use crate::realm::Realm;
 
@@ -12,23 +12,23 @@ pub trait FromU64 {
     fn from_u64(value: u64) -> Self;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct IntegerArray<T> {
-    array: Array,
+    array: ArrayBasic,
     phantom: PhantomData<T>,
 }
 
 impl<T> Node for IntegerArray<T> {
     // #[instrument(target = "IntegerArray")]
     fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
-        let array = Array::from_ref(realm, ref_)?;
+        let array = ArrayBasic::from_ref(realm, ref_)?;
 
         Ok(Self::from_array(array))
     }
 }
 
 impl<T> IntegerArray<T> {
-    pub fn from_array(array: Array) -> Self {
+    pub fn from_array(array: ArrayBasic) -> Self {
         Self {
             array,
             phantom: PhantomData,
@@ -56,7 +56,10 @@ macro_rules! integer_array_impl {
     };
 }
 
-impl<T> IntegerArray<T> {
+impl<T> IntegerArray<T>
+where
+    T: Debug,
+{
     pub fn get(&self, index: usize) -> u64 {
         self.array.get(index)
     }

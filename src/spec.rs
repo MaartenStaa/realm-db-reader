@@ -1,7 +1,7 @@
 use log::warn;
 use tracing::instrument;
 
-use crate::array::{Array, FromU64, IntegerArray};
+use crate::array::{ArrayBasic, FromU64, IntegerArray};
 use crate::build::Build;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -100,7 +100,7 @@ pub struct Spec {
 
 impl Build for Spec {
     #[instrument(target = "Spec")]
-    fn build(array: Array) -> anyhow::Result<Self> {
+    fn build(array: ArrayBasic) -> anyhow::Result<Self> {
         let types = {
             let array: IntegerArray<ColumnType> = array.get_node(0)?;
             array.get_integers_generic()

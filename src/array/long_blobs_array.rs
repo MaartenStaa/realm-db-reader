@@ -4,18 +4,19 @@ use std::sync::Arc;
 use log::warn;
 use tracing::instrument;
 
-use crate::array::{Array, RealmRef};
+use crate::array::{Array, ArrayBasic, RealmRef};
 use crate::node::Node;
-use crate::realm::Realm;
+use crate::realm::{Realm, RealmNode};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LongBlobsArray {
-    array: Array,
+    array: ArrayBasic,
 }
 
 impl Node for LongBlobsArray {
+    #[instrument(target = "LongBlobsArray")]
     fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
-        let array = Array::from_ref(realm, ref_)?;
+        let array = ArrayBasic::from_ref(realm, ref_)?;
 
         assert!(
             array.node.header.has_refs(),
@@ -42,9 +43,9 @@ impl LongBlobsArray {
             return Ok(None);
         };
 
-        let item: Array = self.array.get_node_at_ref(ref_)?;
-        let payload = item.node.payload();
-        let size = item.node.header.size as usize;
+        let item: RealmNode = self.array.get_node_at_ref(ref_)?;
+        let payload = item.payload();
+        let size = item.header.size as usize;
 
         if size == 0 {
             return Ok(None);

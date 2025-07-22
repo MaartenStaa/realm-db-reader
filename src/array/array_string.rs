@@ -7,12 +7,13 @@ use tracing::instrument;
 
 use crate::array::long_blobs_array::LongBlobsArray;
 use crate::array::small_blobs_array::SmallBlobsArray;
-use crate::array::{Array, ArrayStringShort, RealmRef};
+use crate::array::{ArrayStringShort, RealmRef};
 use crate::node::Node;
-use crate::realm::Realm;
+use crate::realm::{Realm, RealmNode};
 
+#[derive(Clone)]
 pub struct ArrayString<T> {
-    array: Array,
+    size: usize,
     inner: ArrayStringInner<T>,
     phantom: PhantomData<T>,
 }
@@ -20,7 +21,7 @@ pub struct ArrayString<T> {
 impl<T> Debug for ArrayString<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ArrayString")
-            .field("array", &self.array)
+            .field("size", &self.size)
             .field("inner", &self.inner)
             .finish()
     }
@@ -29,9 +30,9 @@ impl<T> Debug for ArrayString<T> {
 impl<T> Node for ArrayString<T> {
     // #[instrument(target = "ArrayString")]
     fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
-        let array = Array::from_ref(realm.clone(), ref_)?;
+        let node = RealmNode::from_ref(Arc::clone(&realm), ref_)?;
 
-        let has_long_strings = array.node.header.has_refs();
+        let has_long_strings = node.header.has_refs();
         let inner: ArrayStringInner<T>;
         if !has_long_strings {
             warn!(
@@ -39,14 +40,14 @@ impl<T> Node for ArrayString<T> {
                 "has_long_strings is false, treating as a short string array."
             );
 
-            let is_small = array.node.header.width_scheme() == 1;
+            let is_small = node.header.width_scheme() == 1;
             if !is_small {
                 unimplemented!("width_scheme is not 1 for not-long strings");
             }
 
             inner = ArrayStringInner::Short(ArrayStringShort::from_ref(realm, ref_)?);
         } else {
-            let use_big_blobs = array.node.header.context_flag();
+            let use_big_blobs = node.header.context_flag();
             if !use_big_blobs {
                 warn!(
                     target: "ArrayString",
@@ -65,7 +66,7 @@ impl<T> Node for ArrayString<T> {
         }
 
         Ok(Self {
-            array,
+            size: node.header.size as usize,
             inner,
             phantom: PhantomData,
         })
@@ -111,8 +112,7 @@ impl<T> ArrayString<T> {
 
     #[instrument(target = "ArrayString")]
     fn get_strings_internal(&self) -> anyhow::Result<Vec<Option<String>>> {
-        let size = self.array.node.header.size as usize;
-        (0..size)
+        (0..self.size)
             .map(|index| self.get_inner(index))
             .collect::<anyhow::Result<Vec<_>>>()
     }
@@ -141,6 +141,7 @@ impl ArrayString<Option<String>> {
     }
 }
 
+#[derive(Clone)]
 enum ArrayStringInner<T> {
     Short(ArrayStringShort<T>),
     SmallBlobs(SmallBlobsArray),

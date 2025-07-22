@@ -6,7 +6,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use memmap2::Mmap;
 use tracing::instrument;
 
-use crate::array::{Array, RealmRef};
+use crate::array::{Array, ArrayBasic, RealmRef};
 use crate::node::Node;
 use crate::utils::read_array_value;
 
@@ -80,7 +80,7 @@ pub struct NodeHeader {
 impl Debug for NodeHeader {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("NodeHeader")
-            .field("is_inner_btree", &self.is_inner_btree())
+            .field("is_inner_btree", &self.is_inner_bptree())
             .field("has_refs", &self.has_refs())
             .field("context_flag", &self.context_flag())
             .field("width", &self.width())
@@ -112,7 +112,7 @@ impl NodeHeader {
     }
 
     /* flag helpers --------------------------------------------------------- */
-    pub fn is_inner_btree(&self) -> bool {
+    pub fn is_inner_bptree(&self) -> bool {
         self.flags & 0x80 != 0
     }
     pub fn has_refs(&self) -> bool {
@@ -148,7 +148,8 @@ impl NodeHeader {
         };
 
         // Ensure 8-byte alignment
-        ((num_bytes + 7) & !7) as usize
+        // ((num_bytes + 7) & !7) as usize
+        num_bytes as usize
     }
 }
 
@@ -210,9 +211,9 @@ impl Realm {
         self.hdr.current_top_ref()
     }
 
-    pub(crate) fn into_top_ref_array(self) -> anyhow::Result<Array> {
+    pub(crate) fn into_top_ref_array(self) -> anyhow::Result<ArrayBasic> {
         let ref_ = self.top_ref();
-        let array = Array::from_ref(Arc::new(self), ref_)?;
+        let array = ArrayBasic::from_ref(Arc::new(self), ref_)?;
 
         Ok(array)
     }
@@ -245,9 +246,9 @@ impl Debug for RealmNode {
     }
 }
 
-impl RealmNode {
+impl Node for RealmNode {
     // #[instrument(target = "RealmNode")]
-    pub(crate) fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
+    fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
         let header = realm.header(ref_)?;
         let cached_payload_len = header.payload_len();
 
@@ -258,7 +259,9 @@ impl RealmNode {
             cached_payload_len,
         })
     }
+}
 
+impl RealmNode {
     pub(crate) fn payload(&self) -> &[u8] {
         self.realm.payload(self.ref_, self.cached_payload_len)
     }
@@ -278,7 +281,7 @@ mod tests {
         dbg!(&header);
         eprintln!("flags: {:08b}", header.flags);
 
-        assert!(!header.is_inner_btree());
+        assert!(!header.is_inner_bptree());
         assert!(!header.has_refs());
         assert!(!header.context_flag());
         assert!(header.width_scheme() == 0);
@@ -302,7 +305,7 @@ mod tests {
             header.width_scheme()
         );
 
-        assert!(!header.is_inner_btree());
+        assert!(!header.is_inner_bptree());
         assert!(header.has_refs());
         assert!(!header.context_flag());
         assert_eq!(header.width_scheme(), 0);

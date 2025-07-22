@@ -33,7 +33,7 @@ impl Realm {
         println!(
             "- node @ {:?}: is_inner_btree={} has_refs={} context_flag={} elem_w={elem_w} size={}",
             ref_,
-            hdr.is_inner_btree(),
+            hdr.is_inner_bptree(),
             hdr.has_refs(),
             hdr.context_flag(),
             hdr.size,
@@ -41,25 +41,58 @@ impl Realm {
 
         // How do we read the contents?
         // B+Tree Node
-        if hdr.is_inner_btree() {
+        if hdr.is_inner_bptree() {
+            use crate::utils::read_array_value;
+
             assert!(
                 hdr.has_refs(),
                 "invariant: inner b+tree nodes must have refs"
             );
 
-            let keys_bytes = hdr.size as usize * elem_w as usize;
-            let refs_region = &payload[keys_bytes..];
+            let first_value = read_array_value(payload, elem_w, 0);
+            let is_compact_form = first_value % 2 != 0;
+
+            let last_value = read_array_value(payload, elem_w, hdr.size as usize - 1);
+            let total_element_count = last_value / 2;
+
             indent(depth);
-            println!("  b+tree inner node, {keys_bytes} keys bytes");
+            print!(
+                "  b+tree inner node, is compact form = {is_compact_form}, total elements = {total_element_count}"
+            );
 
-            let num_refs = hdr.size as usize + 1;
-            for i in 0..num_refs {
-                let child_ref = LittleEndian::read_u64(&refs_region[i * 8..][..8]);
+            if is_compact_form {
+                println!(", {} elements per child", first_value / 2)
+            } else {
+                println!();
+                self.walk(RealmRef::new(first_value as usize), depth + 1, None);
+            }
 
-                indent(depth);
-                println!("  reading ref {i} @ {child_ref:X}");
+            for i in 1..(hdr.size - 1) {
+                match decode_slot(payload, elem_w, i as usize) {
+                    SlotValue::Ref(child_ref) => {
+                        if child_ref == 0 {
+                            indent(depth + 1);
+                            println!("- \x1b[31mslot {i} is empty\x1b[0m");
+                            continue;
+                        }
 
-                self.walk(RealmRef::new(child_ref as usize), depth + 1, Some(i))?;
+                        self.walk(
+                            RealmRef::new(child_ref as usize),
+                            depth + 1,
+                            Some(i as usize),
+                        )?;
+                    }
+                    SlotValue::Inline(value) => {
+                        if i == hdr.size - 1 {
+                            indent(depth);
+                            println!("  total element count: {}", value / 2);
+                        } else {
+                            indent(depth + 1);
+                            println!("- \x1b[31mslot {i} has a non-ref value: {value}\x1b[0m");
+                        }
+                    }
+                }
+
             }
             return Ok(());
         }
@@ -68,7 +101,7 @@ impl Realm {
             indent(depth);
             println!(
                 "  {} (no refs)",
-                if hdr.is_inner_btree() {
+                if hdr.is_inner_bptree() {
                     "inner"
                 } else {
                     "leaf"
@@ -76,20 +109,12 @@ impl Realm {
             );
 
             Self::print_payload(payload, elem_w, hdr.size as usize, depth);
-            // indent(depth);
-            // if payload_len > 60 {
-            //     println!("  0x{}...", hex::encode(&payload[..60]));
-            // } else if !payload.is_empty() {
-            //     println!("  0x{}", hex::encode(payload));
-            // } else {
-            //     println!("  (empty payload)");
-            // }
-            //
+
             // leaf without refs – nothing to recurse into
             return Ok(());
         }
 
-        assert!(!hdr.is_inner_btree());
+        assert!(!hdr.is_inner_bptree());
         assert!(hdr.has_refs());
 
         // leaf with inline-or-ref slots ---------------------------
@@ -99,7 +124,7 @@ impl Realm {
             match slot {
                 SlotValue::Ref(child_ref) => {
                     if child_ref == 0 {
-                        indent(depth);
+                        indent(depth + 1);
                         println!("- slot {i} is empty");
                         continue;
                     }
@@ -200,7 +225,7 @@ impl Realm {
         if !payload.is_empty() {
             println!(
                 "  0x{}{}",
-                hex::encode(payload),
+                hex::encode(capped_payload),
                 if capped { "..." } else { "" }
             );
         } else {

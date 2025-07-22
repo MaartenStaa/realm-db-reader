@@ -1,11 +1,12 @@
-use crate::array::{Array, IntegerArray, RealmRef, RefOrTaggedValue};
+use crate::array::{Array, ArrayBasic, IntegerArray, RealmRef, RefOrTaggedValue};
 use crate::node::Node;
 use crate::realm::Realm;
 
 use std::sync::Arc;
 
+#[derive(Debug, Clone)]
 pub struct ArrayLinkList {
-    array: Array,
+    array: Array<usize>,
 }
 
 impl Node for ArrayLinkList {
@@ -20,12 +21,12 @@ impl ArrayLinkList {
     pub fn get(&self, index: usize) -> anyhow::Result<Option<Vec<usize>>> {
         let sub_array = match self.array.get_ref_or_tagged_value(index) {
             Some(RefOrTaggedValue::Ref(ref_)) => {
-                Array::from_ref(self.array.node.realm.clone(), ref_)?
+                ArrayBasic::from_ref(Arc::clone(&self.array.node.realm), ref_)?
             }
             _ => return Ok(None),
         };
 
-        if sub_array.node.header.is_inner_btree() {
+        if sub_array.node.header.is_inner_bptree() {
             unimplemented!();
         }
 

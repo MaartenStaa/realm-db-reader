@@ -1,7 +1,7 @@
-use crate::array::Array;
+use crate::array::ArrayBasic;
 
 pub trait Build {
-    fn build(node: Array) -> anyhow::Result<Self>
+    fn build(node: ArrayBasic) -> anyhow::Result<Self>
     where
         Self: Sized;
 }
