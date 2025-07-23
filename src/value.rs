@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 
-use crate::{array::RealmRef, table::Table};
+use crate::array::RealmRef;
 
 /// Should match `crate::spec::ColumnType`
 #[allow(unused)]
@@ -29,7 +29,7 @@ pub enum Value {
     None,
 }
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
 pub struct Backlink {
     pub origin_table_index: usize,
     pub origin_column_index: usize,

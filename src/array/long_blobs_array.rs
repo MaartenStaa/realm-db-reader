@@ -4,7 +4,7 @@ use std::sync::Arc;
 use log::warn;
 use tracing::instrument;
 
-use crate::array::{Array, ArrayBasic, RealmRef};
+use crate::array::{ArrayBasic, RealmRef};
 use crate::node::Node;
 use crate::realm::{Realm, RealmNode};
 

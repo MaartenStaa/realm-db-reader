@@ -269,6 +269,8 @@ where
     pub fn element_count(&self) -> usize {
         match &self.inner {
             ArrayInner::BPTree(bptree) => bptree.total_elements,
+            ArrayInner::String(array_string) => array_string.element_count(),
+            ArrayInner::Timestamp(array_timestamp) => array_timestamp.element_count(),
             _ => self.node.header.size as usize,
         }
     }

@@ -36,6 +36,10 @@ impl Node for ArrayTimestamp {
 }
 
 impl ArrayTimestamp {
+    pub fn element_count(&self) -> usize {
+        self.seconds.node.header.size as usize
+    }
+
     #[instrument(target = "ArrayTimestamp")]
     pub fn get(&self, index: usize) -> anyhow::Result<Option<DateTime<Utc>>> {
         let seconds = self.seconds.get_integer(index)?;
@@ -45,6 +49,6 @@ impl ArrayTimestamp {
 
         let nanoseconds = self.nanoseconds.get_integer(index)?;
 
-        Ok(DateTime::from_timestamp(seconds as i64, nanoseconds as u32))
+        Ok(DateTime::from_timestamp(seconds as i64, nanoseconds))
     }
 }

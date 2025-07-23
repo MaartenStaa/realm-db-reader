@@ -86,28 +86,3 @@ impl ThinColumnType {
         unsafe { std::mem::transmute(self as u8) }
     }
 }
-
-#[derive(Debug)]
-#[allow(unused)]
-pub struct Spec {
-    pub types: Vec<ColumnType>,
-    // pub types: Array<'a>,
-    // pub names: ArrayStringShort<'a>,
-    // pub attributes: Array<'a>,
-    // pub enum_keys: Array<'a>,
-    // pub keys: Array<'a>,
-}
-
-impl Build for Spec {
-    #[instrument(target = "Spec")]
-    fn build(array: ArrayBasic) -> anyhow::Result<Self> {
-        let types = {
-            let array: IntegerArray<ColumnType> = array.get_node(0)?;
-            array.get_integers_generic()
-        };
-
-        warn!(target: "Spec", "types: {:?}", types);
-
-        Ok(Self { types })
-    }
-}

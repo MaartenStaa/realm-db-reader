@@ -74,14 +74,15 @@ impl Table {
     pub fn row_count(&self) -> anyhow::Result<usize> {
         let first_column = self.header.get_column(0)?;
         let first_column_type = first_column.as_column_type();
+        let data_array_index = first_column.get_data_array_index();
 
         match first_column_type {
             ColumnType::Int | ColumnType::Bool => {
-                let array: Array<u64> = self.data_array.get_node(0)?;
+                let array: Array<u64> = self.data_array.get_node(data_array_index)?;
                 Ok(array.element_count())
             }
             ColumnType::String => {
-                let array: Array<String> = self.data_array.get_node(0)?;
+                let array: Array<String> = self.data_array.get_node(data_array_index)?;
                 Ok(array.element_count())
             }
             _ => {

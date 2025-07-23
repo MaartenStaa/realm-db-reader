@@ -6,7 +6,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use memmap2::Mmap;
 use tracing::instrument;
 
-use crate::array::{Array, ArrayBasic, RealmRef};
+use crate::array::{ArrayBasic, RealmRef};
 use crate::node::Node;
 use crate::utils::read_array_value;
 
