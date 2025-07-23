@@ -150,14 +150,16 @@ impl Index {
                 continue;
             }
 
-            // let stored_key = current_index.offsets.get(pos) as KeyType;
-            // if stored_key != key {
-            //     log::warn!(
-            //         target: "Index", "Key mismatch: stored_key = {stored_key:?}, expected key = {key:?} at pos = {pos}"
-            //     );
-            //
-            //     return Ok(None);
-            // }
+            let stored_key = current_index.offsets.get(pos) as KeyType;
+            if stored_key != key {
+                log::warn!(
+                    target: "Index", "Key mismatch: stored_key = {stored_key:?} ({}), expected key = {key:?} ({}) at pos = {pos}",
+                    str::from_utf8(&stored_key.to_le_bytes()[..4])?,
+                    str::from_utf8(&key.to_le_bytes()[..4])?
+                );
+
+                return Ok(None);
+            }
 
             match RefOrTaggedValue::from_raw(ref_) {
                 RefOrTaggedValue::TaggedRef(row_index) => {
@@ -208,7 +210,9 @@ impl Index {
         let mut key: KeyType = 0;
 
         for (i, c) in value.char_indices().take(Self::KEY_SIZE as usize) {
-            key |= (c as u32) << (i * 8);
+            // Index 0 shift left by 24, index 1 by 16...
+            let shl = (Self::KEY_SIZE - 1 - i as u8) * 8;
+            key |= (c as u32) << shl;
         }
 
         key
