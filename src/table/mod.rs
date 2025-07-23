@@ -107,13 +107,6 @@ impl Table {
     }
 
     #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
-    pub fn get_row_mut(&mut self, index: usize) -> anyhow::Result<&mut [Value]> {
-        self.ensure_row_loaded(index)?;
-
-        Ok(self.data_rows[index].as_mut().unwrap())
-    }
-
-    #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
     pub fn find_row_from_indexed_column<'a>(
         &'a mut self,
         indexed_column_name: &str,

@@ -5,44 +5,8 @@ use crate::array::{ArrayBasic, ArrayStringShort, Expectation};
 use crate::build::Build;
 use crate::table::Table;
 
-// #[derive(Debug)]
-// #[allow(unused)]
-// pub struct Group {
-//     tables: HashMap<String, Table>,
-// }
-
-// impl Build<'_> for Group {
-//     #[instrument(target = "Group")]
-//     fn build(array: Array) -> anyhow::Result<Self> {
-//         let table_names = {
-//             let array: ArrayStringShort<String> = array.get_node(0)?;
-//             array.get_strings()
-//         };
-
-//         warn!(target: "Group", "table_names: {:?}", table_names);
-
-//         let table_refs = {
-//             let array: GenericArray<Table> = array.get_node(1)?;
-//             array.get_elements()?
-//         };
-
-//         warn!(target: "Group", "table_refs: {:?}", table_refs);
-
-//         assert_eq!(
-//             table_names.len(),
-//             table_refs.len(),
-//             "table_names and table_refs must have the same length"
-//         );
-
-//         Ok(Self {
-//             tables: table_names.into_iter().zip(table_refs).collect(),
-//         })
-//     }
-// }
-
 #[derive(Debug)]
 pub struct Group {
-    // group_array: Array<'a>,
     tables_array: ArrayBasic,
     table_names: Vec<String>,
     tables: Vec<Option<Table>>,
