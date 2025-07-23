@@ -1,12 +1,11 @@
 use std::borrow::Cow;
 use std::sync::Arc;
 
-use anyhow::bail;
 use tracing::instrument;
 
 use crate::array::{ArrayBasic, RealmRef, RefOrTaggedValue};
 use crate::node::Node;
-use crate::realm::{Realm, RealmNode};
+use crate::realm::Realm;
 use crate::utils;
 use crate::value::Value;
 
@@ -14,17 +13,6 @@ use crate::value::Value;
 pub struct Index {
     array: ArrayBasic,
     offsets: ArrayBasic,
-    // keys: Vec<u8>,
-    // offsets_size: usize,
-    // is_inner: bool,
-    // components: Vec<IndexComponent>,
-}
-
-#[derive(Debug, Clone)]
-pub enum IndexComponent {
-    RowIndex(usize),
-    RowIndexes(Vec<usize>),
-    SubIndex(Box<Index>),
 }
 
 impl Node for Index {
@@ -32,72 +20,11 @@ impl Node for Index {
         let array = unsafe { ArrayBasic::from_ref_bypass_bptree(Arc::clone(&realm), ref_)? };
         assert!(array.node.header.size >= 1);
 
-        let (keys, offsets_size) = {
-            let keys_node: ArrayBasic = array.get_node(0)?;
-            (
-                // keys_node.node.payload().to_vec(),
-                // keys_node.node.header.size as usize,
-                keys_node, 0,
-            )
-        };
-
-        // let is_inner_bptree = array.node.header.is_inner_bptree();
-        // let components = if is_inner_bptree {
-        //     assert!(
-        //         array.node.header.context_flag(),
-        //         "Inner B+Tree nodes should have context flag set"
-        //     );
-        //
-        //     let size = array.node.header.size as usize;
-        //     (1..size)
-        //         .map(|i| -> anyhow::Result<_> {
-        //             let Some(sub_index_ref) = array.get_ref(i) else {
-        //                 bail!("Sub index ref is None");
-        //             };
-        //             let sub_index = Index::from_ref(Arc::clone(&realm), sub_index_ref)?;
-        //             Ok(IndexComponent::SubIndex(Box::new(sub_index)))
-        //         })
-        //         .collect::<anyhow::Result<Vec<_>>>()?
-        // } else {
-        //     let size = array.node.header.size as usize;
-        //     (1..size)
-        //         .map(|i| {
-        //             match array.get_ref_or_tagged_value(i) {
-        //                 Some(RefOrTaggedValue::Ref(ref_)) => {
-        //                     // If it's a reference to a node with refs, then it's a sub-index,
-        //                     // otherwise it's an array of row indexes.
-        //                     let node = RealmNode::from_ref(Arc::clone(&realm), ref_)?;
-        //                     if node.header.has_refs() {
-        //                         let sub_index = Index::from_ref(Arc::clone(&realm), ref_)?;
-        //                         Ok(IndexComponent::SubIndex(Box::new(sub_index)))
-        //                     } else {
-        //                         let array = ArrayBasic::from_ref(Arc::clone(&realm), ref_)?;
-        //                         let row_indexes: Vec<usize> = (0..array.node.header.size)
-        //                             .map(|i| array.get(i as usize) as usize)
-        //                             .collect();
-        //
-        //                         Ok(IndexComponent::RowIndexes(row_indexes))
-        //                     }
-        //                 }
-        //                 Some(RefOrTaggedValue::TaggedRef(value)) => {
-        //                     // If it's a tagged value, then it's a single row index.
-        //                     Ok(IndexComponent::RowIndex(value as usize))
-        //                 }
-        //                 None => {
-        //                     bail!("Index component at index {i} is None (in node {array:?})");
-        //                 }
-        //             }
-        //         })
-        //         .collect::<anyhow::Result<Vec<_>>>()?
-        // };
+        let keys = array.get_node(0)?;
 
         Ok(Self {
             array,
             offsets: keys,
-            // keys,
-            // offsets_size,
-            // is_inner: is_inner_bptree,
-            // components,
         })
     }
 }
