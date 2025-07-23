@@ -1,5 +1,6 @@
 mod column;
 mod header;
+mod row;
 mod spec;
 
 use std::collections::HashMap;
@@ -16,6 +17,7 @@ use crate::node::Node;
 use crate::spec::{ColumnType, ThinColumnType};
 use crate::table::column::ColumnAttributes;
 use crate::table::header::TableHeader;
+use crate::table::row::Row;
 use crate::table::spec::{ColumnSpec, FatColumnType};
 use crate::value::{Backlink, Value};
 
@@ -95,10 +97,13 @@ impl Table {
     }
 
     #[instrument(target = "Table", skip(self), fields(header = ?self.header))]
-    pub fn get_row(&mut self, index: usize) -> anyhow::Result<&[Value]> {
+    pub fn get_row<'a>(&'a mut self, index: usize) -> anyhow::Result<Row<'a>> {
         self.ensure_row_loaded(index)?;
 
-        Ok(self.data_rows[index].as_ref().unwrap())
+        Ok(Row::new(
+            self.data_rows[index].as_ref().unwrap(),
+            self.header.get_columns(),
+        ))
     }
 
     #[instrument(target = "Table", skip(self), fields(header = ?self.header))]
@@ -109,11 +114,11 @@ impl Table {
     }
 
     #[instrument(target = "Table", skip(self), fields(header = ?self.header))]
-    pub fn find_row_from_index(
-        &mut self,
+    pub fn find_row_from_indexed_column<'a>(
+        &'a mut self,
         indexed_column_name: &str,
         value: &Value,
-    ) -> anyhow::Result<Option<&[Value]>> {
+    ) -> anyhow::Result<Option<Row<'a>>> {
         // Find the column index for the given column name
         let (column_index, column_spec) = self
             .header
@@ -183,7 +188,7 @@ impl Table {
     }
 
     #[instrument(target = "Table", skip(self), fields(header = ?self.header))]
-    pub fn get_rows(&mut self) -> anyhow::Result<Vec<&[Value]>> {
+    pub fn get_rows<'a>(&'a mut self) -> anyhow::Result<Vec<Row<'a>>> {
         let row_count = self.row_count()?;
         if self.data_rows.len() < row_count || self.data_rows.iter().any(|r| r.is_none()) {
             for i in 0..row_count {
@@ -194,7 +199,7 @@ impl Table {
         Ok(self
             .data_rows
             .iter()
-            .map(|r| r.as_ref().unwrap().as_slice())
+            .map(|r| Row::new(r.as_ref().unwrap().as_slice(), self.header.get_columns()))
             .collect())
     }
 
