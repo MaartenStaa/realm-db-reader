@@ -4,7 +4,7 @@ use std::sync::Arc;
 use log::warn;
 use tracing::instrument;
 
-use crate::array::{Array, ArrayBasic, RealmRef};
+use crate::array::{Array, ArrayBasic, Expectation, RealmRef};
 use crate::node::Node;
 use crate::realm::{Realm, RealmNode};
 
@@ -49,7 +49,7 @@ impl SmallBlobsArray {
     }
 
     #[instrument(target = "SmallBlobsArray", level = "debug")]
-    pub fn get(&self, index: usize) -> Option<Vec<u8>> {
+    pub fn get(&self, index: usize, expectation: Expectation) -> Option<Vec<u8>> {
         if let Some(null_array) = &self.null {
             let is_null = null_array.get(index);
             assert!(
@@ -57,7 +57,10 @@ impl SmallBlobsArray {
                 "Invalid null value: {is_null}"
             );
             if is_null == 1 {
-                return None; // This blob is null
+                return match expectation {
+                    Expectation::Nullable => None,
+                    Expectation::NotNullable => Some(vec![]),
+                };
             }
         }
 

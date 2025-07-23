@@ -7,7 +7,7 @@ use tracing::instrument;
 
 use crate::array::long_blobs_array::LongBlobsArray;
 use crate::array::small_blobs_array::SmallBlobsArray;
-use crate::array::{ArrayStringShort, RealmRef};
+use crate::array::{ArrayStringShort, Expectation, RealmRef};
 use crate::node::Node;
 use crate::realm::{Realm, RealmNode};
 
@@ -83,15 +83,17 @@ impl<T> ArrayString<T> {
     }
 
     #[instrument(target = "ArrayString", level = "debug")]
-    fn get_inner(&self, index: usize) -> anyhow::Result<Option<String>> {
+    fn get_inner(&self, index: usize, expectation: Expectation) -> anyhow::Result<Option<String>> {
         match &self.inner {
-            ArrayStringInner::Short(short) => Ok(short.get(index).map(|s| s.to_string())),
-            ArrayStringInner::SmallBlobs(small_blobs) => {
-                Ok(small_blobs.get(index).map(Self::string_from_bytes))
+            ArrayStringInner::Short(short) => {
+                Ok(short.get(index, expectation).map(|s| s.to_string()))
             }
-            ArrayStringInner::LongBlobs(long_blobs) => {
-                Ok(long_blobs.get(index)?.map(Self::string_from_bytes))
-            }
+            ArrayStringInner::SmallBlobs(small_blobs) => Ok(small_blobs
+                .get(index, expectation)
+                .map(Self::string_from_bytes)),
+            ArrayStringInner::LongBlobs(long_blobs) => Ok(long_blobs
+                .get(index, expectation)?
+                .map(Self::string_from_bytes)),
         }
     }
 
@@ -111,23 +113,30 @@ impl<T> ArrayString<T> {
     }
 
     #[instrument(target = "ArrayString", level = "debug")]
-    fn get_strings_internal(&self) -> anyhow::Result<Vec<Option<String>>> {
+    fn get_strings_internal(
+        &self,
+        expectation: Expectation,
+    ) -> anyhow::Result<Vec<Option<String>>> {
         (0..self.size)
-            .map(|index| self.get_inner(index))
+            .map(|index| self.get_inner(index, expectation))
             .collect::<anyhow::Result<Vec<_>>>()
     }
 }
 
 impl ArrayString<String> {
     #[instrument(target = "ArrayString", level = "debug")]
-    pub fn get_string(&self, index: usize) -> anyhow::Result<Option<String>> {
-        self.get_inner(index)
+    pub fn get_string(
+        &self,
+        index: usize,
+        expectation: Expectation,
+    ) -> anyhow::Result<Option<String>> {
+        self.get_inner(index, expectation)
     }
 
     #[instrument(target = "ArrayString", level = "debug")]
-    pub fn get_strings(&self) -> anyhow::Result<Vec<String>> {
+    pub fn get_strings(&self, expectation: Expectation) -> anyhow::Result<Vec<String>> {
         Ok(self
-            .get_strings_internal()?
+            .get_strings_internal(expectation)?
             .into_iter()
             .map(|s| s.unwrap_or_default())
             .collect())
@@ -136,8 +145,8 @@ impl ArrayString<String> {
 
 impl ArrayString<Option<String>> {
     #[instrument(target = "ArrayString", level = "debug")]
-    pub fn get_strings(&self) -> anyhow::Result<Vec<Option<String>>> {
-        self.get_strings_internal()
+    pub fn get_strings(&self, expectation: Expectation) -> anyhow::Result<Vec<Option<String>>> {
+        self.get_strings_internal(expectation)
     }
 }
 

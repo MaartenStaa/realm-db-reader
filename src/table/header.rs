@@ -2,7 +2,7 @@ use anyhow::{anyhow, bail};
 use log::warn;
 use tracing::instrument;
 
-use crate::array::{ArrayBasic, ArrayString, IntegerArray, RefOrTaggedValue};
+use crate::array::{ArrayBasic, ArrayString, Expectation, IntegerArray, RefOrTaggedValue};
 use crate::build::Build;
 use crate::spec::ColumnType;
 use crate::table::column::ColumnAttributes;
@@ -165,7 +165,7 @@ impl Build for TableHeader {
 
         let column_names = {
             let array: ArrayString<String> = array.get_node(1)?;
-            array.get_strings()?
+            array.get_strings(Expectation::NotNullable)?
         };
 
         warn!(target: "TableHeader", "column_names: {:?}", column_names);

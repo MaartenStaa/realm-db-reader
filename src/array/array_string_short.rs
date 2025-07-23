@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use crate::array::RealmRef;
+use crate::array::{Expectation, RealmRef};
 use crate::node::Node;
 use crate::realm::{Realm, RealmNode};
 use log::debug;
@@ -41,16 +41,19 @@ impl<T> ArrayStringShort<T> {
     }
 
     #[instrument(target = "ArrayStringShort", level = "debug")]
-    pub fn get(&self, index: usize) -> Option<&str> {
-        Self::get_static(&self.node, index)
+    pub fn get(&self, index: usize, expectation: Expectation) -> Option<&str> {
+        Self::get_static(&self.node, index, expectation)
     }
 
     #[instrument(target = "ArrayStringShort", level = "debug")]
-    pub fn get_static(node: &RealmNode, index: usize) -> Option<&str> {
+    pub fn get_static(node: &RealmNode, index: usize, expectation: Expectation) -> Option<&str> {
         let width = node.header.width() as usize;
         if width == 0 {
             debug!("get: width is 0, returning None");
-            return None;
+            return match expectation {
+                Expectation::Nullable => None,
+                Expectation::NotNullable => Some(""),
+            };
         }
 
         let element_data = &node.payload()[index * width..(index + 1) * width];
@@ -71,9 +74,13 @@ impl<T> ArrayStringShort<T> {
 
 impl ArrayStringShort<String> {
     #[instrument(target = "ArrayStringShort", level = "debug")]
-    pub fn get_strings(&self) -> Vec<String> {
+    pub fn get_strings(&self, expectation: Expectation) -> Vec<String> {
         (0..self.node.header.size as usize)
-            .map(|i| self.get(i).map(|s| s.to_string()).unwrap_or_default())
+            .map(|i| {
+                self.get(i, expectation)
+                    .map(|s| s.to_string())
+                    .unwrap_or_default()
+            })
             .collect()
     }
 }
@@ -81,9 +88,9 @@ impl ArrayStringShort<String> {
 #[allow(unused)]
 impl ArrayStringShort<Option<String>> {
     #[instrument(target = "ArrayStringShort", level = "debug")]
-    pub fn get_strings(&self) -> Vec<Option<String>> {
+    pub fn get_strings(&self, expectation: Expectation) -> Vec<Option<String>> {
         (0..self.node.header.size as usize)
-            .map(|i| self.get(i).map(|s| s.to_string()))
+            .map(|i| self.get(i, expectation).map(|s| s.to_string()))
             .collect()
     }
 }
@@ -91,9 +98,9 @@ impl ArrayStringShort<Option<String>> {
 #[allow(unused)]
 impl ArrayStringShort<&str> {
     #[instrument(target = "ArrayStringShort", level = "debug")]
-    pub fn get_strings(&self) -> Vec<&str> {
+    pub fn get_strings(&self, expectation: Expectation) -> Vec<&str> {
         (0..self.node.header.size as usize)
-            .map(|i| self.get(i).unwrap_or_default())
+            .map(|i| self.get(i, expectation).unwrap_or_default())
             .collect()
     }
 }

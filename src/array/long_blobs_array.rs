@@ -4,7 +4,7 @@ use std::sync::Arc;
 use log::warn;
 use tracing::instrument;
 
-use crate::array::{ArrayBasic, RealmRef};
+use crate::array::{ArrayBasic, Expectation, RealmRef};
 use crate::node::Node;
 use crate::realm::{Realm, RealmNode};
 
@@ -37,10 +37,13 @@ impl LongBlobsArray {
     }
 
     #[instrument(target = "LongBlobsArray", level = "debug")]
-    pub fn get(&self, index: usize) -> anyhow::Result<Option<Vec<u8>>> {
+    pub fn get(&self, index: usize, expectation: Expectation) -> anyhow::Result<Option<Vec<u8>>> {
         let Some(ref_) = self.array.get_ref(index) else {
             warn!("get: index={index} returned NULL");
-            return Ok(None);
+            return Ok(match expectation {
+                Expectation::Nullable => None,
+                Expectation::NotNullable => Some(vec![]),
+            });
         };
 
         let item: RealmNode = self.array.get_node_at_ref(ref_)?;
@@ -48,7 +51,10 @@ impl LongBlobsArray {
         let size = item.header.size as usize;
 
         if size == 0 {
-            return Ok(None);
+            return Ok(match expectation {
+                Expectation::Nullable => None,
+                Expectation::NotNullable => Some(vec![]),
+            });
         }
 
         assert!(

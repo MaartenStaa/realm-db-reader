@@ -1,7 +1,7 @@
 use log::warn;
 use tracing::instrument;
 
-use crate::array::{ArrayBasic, ArrayStringShort};
+use crate::array::{ArrayBasic, ArrayStringShort, Expectation};
 use crate::build::Build;
 use crate::table::Table;
 
@@ -53,7 +53,7 @@ impl Build for Group {
     fn build(array: ArrayBasic) -> anyhow::Result<Self> {
         let table_names = {
             let array: ArrayStringShort<String> = array.get_node(0)?;
-            array.get_strings()
+            array.get_strings(Expectation::NotNullable)
         };
 
         let tables = table_names.iter().map(|_| None).collect();

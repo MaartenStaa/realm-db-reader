@@ -276,16 +276,26 @@ where
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum Expectation {
+    Nullable,
+    NotNullable,
+}
+
 impl Array<String> {
-    pub fn get_string(&self, index: usize) -> anyhow::Result<Option<String>> {
+    pub fn get_string(
+        &self,
+        index: usize,
+        expectation: Expectation,
+    ) -> anyhow::Result<Option<String>> {
         match &self.inner {
             ArrayInner::BPTree(bptree) => {
                 let (child_index, index_in_child) = bptree.find_bptree_child(index);
                 let child: Self = self.get_node(child_index)?;
 
-                child.get_string(index_in_child)
+                child.get_string(index_in_child, expectation)
             }
-            ArrayInner::String(array_string) => array_string.get_string(index),
+            ArrayInner::String(array_string) => array_string.get_string(index, expectation),
             _ => unreachable!("get_string called on non-string array"),
         }
     }

@@ -2,7 +2,6 @@ use crate::array::RealmRef;
 use crate::realm::{NodeHeader, Realm, SlotValue, decode_slot};
 
 use anyhow::Result;
-use byteorder::{ByteOrder, LittleEndian};
 use log::warn;
 
 #[cfg(debug_assertions)]
@@ -92,7 +91,6 @@ impl Realm {
                         }
                     }
                 }
-
             }
             return Ok(());
         }

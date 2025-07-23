@@ -10,7 +10,7 @@ use anyhow::{Ok, anyhow, bail};
 use log::{debug, warn};
 use tracing::instrument;
 
-use crate::array::{Array, ArrayBasic, ArrayTimestamp};
+use crate::array::{Array, ArrayBasic, ArrayTimestamp, Expectation};
 use crate::build::Build;
 use crate::index::Index;
 use crate::node::Node;
@@ -339,13 +339,17 @@ impl Table {
             }
             ThinColumnType::String => {
                 let array: Array<String> = self.data_array.get_node(data_array_index)?;
-                let value = array.get_string(row_index)?;
-                Ok(match (value, attributes.is_nullable()) {
-                    (Some(value), _) => Value::String(value),
-                    (_, true) => Value::None,
-                    (_, false) => {
-                        bail!("Expected string value for non-nullable column")
-                    }
+                let value = array.get_string(
+                    row_index,
+                    if attributes.is_nullable() {
+                        Expectation::Nullable
+                    } else {
+                        Expectation::NotNullable
+                    },
+                )?;
+                Ok(match value {
+                    Some(string) => Value::String(string),
+                    None => Value::None,
                 })
             }
             ThinColumnType::Timestamp => {
