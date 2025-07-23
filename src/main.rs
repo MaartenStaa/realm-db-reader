@@ -30,6 +30,7 @@ struct Cli {
 enum Command {
     Debug,
     Parse,
+    Stress,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -96,6 +97,20 @@ fn main() -> anyhow::Result<()> {
             dbg!(folders.get_rows()?);
             // let rows = folders.get_rows()?;
             // dbg!(&rows);
+        }
+        Command::Stress => {
+            // Try to just load everything in the realm
+            let mut group = Group::build(realm.into_top_ref_array()?)?;
+            for table_index in 0..group.table_count() {
+                let name = group.get_table_name(table_index).to_owned();
+
+                log::info!("Loading table {table_index}: {name}");
+
+                let table = group.get_table_mut(table_index)?;
+                let rows = table.get_rows()?;
+
+                println!("Table {} contains {} rows", name, rows.len());
+            }
         }
     }
 

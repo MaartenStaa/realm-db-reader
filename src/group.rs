@@ -65,6 +65,14 @@ impl Group {
         self.get_or_load_table(index)
     }
 
+    pub fn table_count(&self) -> usize {
+        self.table_names.len()
+    }
+
+    pub fn get_table_name(&self, index: usize) -> &str {
+        &self.table_names[index]
+    }
+
     #[instrument(target = "Group", level = "debug", skip(self), fields(table_names = ?self.table_names))]
     fn get_or_load_table(&mut self, index: usize) -> anyhow::Result<&mut Table> {
         if self.tables[index].is_some() {
