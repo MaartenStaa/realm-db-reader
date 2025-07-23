@@ -10,7 +10,6 @@ use crate::value::Value;
 
 mod array;
 mod build;
-mod column;
 mod debug;
 mod group;
 mod index;
