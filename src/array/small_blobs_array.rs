@@ -48,7 +48,7 @@ impl SmallBlobsArray {
         self.lengths.node.header.size as usize
     }
 
-    #[instrument(target = "SmallBlobsArray")]
+    #[instrument(target = "SmallBlobsArray", level = "debug")]
     pub fn get(&self, index: usize) -> Option<Vec<u8>> {
         if let Some(null_array) = &self.null {
             let is_null = null_array.get(index);

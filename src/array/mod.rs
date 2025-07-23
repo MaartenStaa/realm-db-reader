@@ -62,7 +62,7 @@ impl BPTreeArray {
     /// offsets of the children. So child 0 is at index 1.
     const CHILD_OFFSET: usize = 1;
 
-    #[instrument(target = "BPTreeArray")]
+    #[instrument(target = "BPTreeArray", level = "debug")]
     fn find_bptree_child(&self, index: usize) -> (usize, usize) {
         assert!(
             index < self.total_elements,
@@ -138,7 +138,7 @@ impl RefOrTaggedValue {
 macro_rules! array_node_impl {
     ($T:ty, $inner_variant:ident, $inner_class:ty) => {
         impl Node for Array<$T> {
-            #[instrument(target = "Array")]
+            #[instrument(target = "Array", level = "debug")]
             fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
                 let node = RealmNode::from_ref(Arc::clone(&realm), ref_)?;
                 let inner = if node.header.is_inner_bptree() {
@@ -203,14 +203,14 @@ impl<T> Array<T>
 where
     T: Debug,
 {
-    #[instrument(target = "Array")]
+    #[instrument(target = "Array", level = "debug")]
     fn get(&self, index: usize) -> u64 {
         let width = self.node.header.width();
 
         self.get_direct(width, index)
     }
 
-    #[instrument(target = "Array")]
+    #[instrument(target = "Array", level = "debug")]
     fn get_ref(&self, index: usize) -> Option<RealmRef> {
         let width = self.node.header.width();
         let ref_ = self.get_direct(width, index);
@@ -224,7 +224,7 @@ where
         Some(RealmRef(ref_ as usize))
     }
 
-    #[instrument(target = "Array")]
+    #[instrument(target = "Array", level = "debug")]
     fn get_ref_or_tagged_value(&self, index: usize) -> Option<RefOrTaggedValue> {
         let width = self.node.header.width();
         let value = self.get_direct(width, index);
@@ -236,7 +236,7 @@ where
         Some(RefOrTaggedValue::from_raw(value))
     }
 
-    #[instrument(target = "Array")]
+    #[instrument(target = "Array", level = "debug")]
     fn get_node<N>(&self, index: usize) -> anyhow::Result<N>
     where
         N: Node,
@@ -247,7 +247,7 @@ where
         self.get_node_at_ref(ref_.unwrap())
     }
 
-    #[instrument(target = "Array")]
+    #[instrument(target = "Array", level = "debug")]
     fn get_node_at_ref<N>(&self, ref_: RealmRef) -> anyhow::Result<N>
     where
         N: Node,
@@ -261,7 +261,7 @@ where
         N::from_ref(self.node.realm.clone(), ref_)
     }
 
-    #[instrument(target = "Array")]
+    #[instrument(target = "Array", level = "debug")]
     fn get_direct(&self, width: u8, index: usize) -> u64 {
         read_array_value(self.node.payload(), width, index)
     }

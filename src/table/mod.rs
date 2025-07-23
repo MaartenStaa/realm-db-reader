@@ -32,7 +32,7 @@ pub struct Table {
 }
 
 impl Build for Table {
-    #[instrument(target = "Table")]
+    #[instrument(target = "Table", level = "debug")]
     fn build(array: ArrayBasic) -> anyhow::Result<Self> {
         let header = {
             let array: ArrayBasic = array.get_node(0)?;
@@ -55,7 +55,7 @@ impl Build for Table {
 }
 
 impl Table {
-    #[instrument(target = "Table")]
+    #[instrument(target = "Table", level = "debug")]
     fn new_for_subtable(header: TableHeader, data_array: ArrayBasic) -> Self {
         let data_columns = header.get_columns().iter().map(|_| vec![]).collect();
 
@@ -72,7 +72,7 @@ impl Table {
         self.header.get_column(column_index)
     }
 
-    #[instrument(target = "Table", skip(self), fields(header = ?self.header))]
+    #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
     pub fn row_count(&self) -> anyhow::Result<usize> {
         let first_column = self.header.get_column(0)?;
         let first_column_type = first_column.as_column_type();
@@ -96,7 +96,7 @@ impl Table {
         }
     }
 
-    #[instrument(target = "Table", skip(self), fields(header = ?self.header))]
+    #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
     pub fn get_row<'a>(&'a mut self, index: usize) -> anyhow::Result<Row<'a>> {
         self.ensure_row_loaded(index)?;
 
@@ -106,14 +106,14 @@ impl Table {
         ))
     }
 
-    #[instrument(target = "Table", skip(self), fields(header = ?self.header))]
+    #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
     pub fn get_row_mut(&mut self, index: usize) -> anyhow::Result<&mut [Value]> {
         self.ensure_row_loaded(index)?;
 
         Ok(self.data_rows[index].as_mut().unwrap())
     }
 
-    #[instrument(target = "Table", skip(self), fields(header = ?self.header))]
+    #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
     pub fn find_row_from_indexed_column<'a>(
         &'a mut self,
         indexed_column_name: &str,
@@ -166,7 +166,7 @@ impl Table {
         Ok(Some(self.get_row(row_index)?))
     }
 
-    #[instrument(target = "Table", skip(self), fields(header = ?self.header))]
+    #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
     fn ensure_row_loaded(&mut self, index: usize) -> anyhow::Result<()> {
         if self.data_rows.len() > index && self.data_rows[index].is_some() {
             return Ok(());
@@ -187,7 +187,7 @@ impl Table {
         Ok(())
     }
 
-    #[instrument(target = "Table", skip(self), fields(header = ?self.header))]
+    #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
     pub fn get_rows<'a>(&'a mut self) -> anyhow::Result<Vec<Row<'a>>> {
         let row_count = self.row_count()?;
         if self.data_rows.len() < row_count || self.data_rows.iter().any(|r| r.is_none()) {
@@ -203,7 +203,7 @@ impl Table {
             .collect())
     }
 
-    #[instrument(target = "Table", skip(self), fields(header = ?self.header))]
+    #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
     fn ensure_columns_loaded(&mut self, row_index: usize) -> anyhow::Result<()> {
         for column_index in 0..self.header.column_count() {
             log::warn!(target: "Table", "loading column {column_index} for row {row_index}");
@@ -213,7 +213,7 @@ impl Table {
         Ok(())
     }
 
-    #[instrument(target = "Table", skip(self), fields(header = ?self.header))]
+    #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
     fn ensure_column_loaded(
         &mut self,
         column_index: usize,
@@ -249,7 +249,7 @@ impl Table {
         Ok(())
     }
 
-    #[instrument(target = "Table", skip(self))]
+    #[instrument(target = "Table", level = "debug", skip(self))]
     fn read_column_row(
         &self,
         column_index: usize,
@@ -280,7 +280,7 @@ impl Table {
         }
     }
 
-    #[instrument(target = "Table", skip(self))]
+    #[instrument(target = "Table", level = "debug", skip(self))]
     fn read_column_row_regular(
         &self,
         data_array_index: usize,
@@ -317,7 +317,7 @@ impl Table {
         }
     }
 
-    #[instrument(target = "Table", skip(self))]
+    #[instrument(target = "Table", level = "debug", skip(self))]
     fn read_column_row_thin(
         &self,
         data_array_index: usize,
@@ -363,7 +363,7 @@ impl Table {
         }
     }
 
-    #[instrument(target = "Table", skip(self))]
+    #[instrument(target = "Table", level = "debug", skip(self))]
     fn read_column_row_table(
         &self,
         data_array_index: usize,
@@ -389,7 +389,7 @@ impl Table {
         // )))
     }
 
-    #[instrument(target = "Table", skip(self))]
+    #[instrument(target = "Table", level = "debug", skip(self))]
     fn read_column_row_link(
         &self,
         data_array_index: usize,
@@ -401,7 +401,7 @@ impl Table {
         unimplemented!("link column {name} at index {data_array_index}");
     }
 
-    #[instrument(target = "Table", skip(self))]
+    #[instrument(target = "Table", level = "debug", skip(self))]
     fn read_column_row_link_list(
         &self,
         data_array_index: usize,
@@ -420,7 +420,7 @@ impl Table {
         })
     }
 
-    #[instrument(target = "Table", skip(self))]
+    #[instrument(target = "Table", level = "debug", skip(self))]
     fn read_column_row_backlink(
         &self,
         data_array_index: usize,

@@ -14,7 +14,7 @@ pub struct TableHeader {
 }
 
 impl TableHeader {
-    #[instrument(target = "TableHeader")]
+    #[instrument(target = "TableHeader", level = "debug")]
     fn from_parts(
         column_types: Vec<ColumnType>,
         mut column_names: Vec<String>,
@@ -154,7 +154,7 @@ impl TableHeader {
 }
 
 impl Build for TableHeader {
-    #[instrument(target = "TableHeader")]
+    #[instrument(target = "TableHeader", level = "debug")]
     fn build(array: ArrayBasic) -> anyhow::Result<Self> {
         let column_types = {
             let array: IntegerArray<ColumnType> = array.get_node(0)?;

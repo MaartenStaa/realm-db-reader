@@ -16,7 +16,7 @@ pub struct ArrayTimestamp {
 }
 
 impl Node for ArrayTimestamp {
-    #[instrument(target = "ArrayTimestamp")]
+    #[instrument(target = "ArrayTimestamp", level = "debug")]
     fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
         let array = ArrayBasic::from_ref(realm, ref_)?;
 
@@ -40,7 +40,7 @@ impl ArrayTimestamp {
         self.seconds.node.header.size as usize
     }
 
-    #[instrument(target = "ArrayTimestamp")]
+    #[instrument(target = "ArrayTimestamp", level = "debug")]
     pub fn get(&self, index: usize) -> anyhow::Result<Option<DateTime<Utc>>> {
         let seconds = self.seconds.get_integer(index)?;
         if seconds == 0 {

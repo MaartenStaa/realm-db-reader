@@ -24,7 +24,7 @@ impl<T> Debug for GenericArray<T> {
 }
 
 impl<T> Node for GenericArray<T> {
-    #[instrument(target = "GenericArray")]
+    #[instrument(target = "GenericArray", level = "debug")]
     fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
         let array = Array::from_ref(realm, ref_)?;
 
@@ -39,7 +39,7 @@ impl<T> GenericArray<T>
 where
     T: Build + std::fmt::Debug,
 {
-    #[instrument(target = "GenericArray")]
+    #[instrument(target = "GenericArray", level = "debug")]
     pub fn get_elements(&self) -> anyhow::Result<Vec<T>> {
         let mut result = Vec::with_capacity(self.array.node.header.size as usize);
         for i in 0..self.array.node.header.size as usize {

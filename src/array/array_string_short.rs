@@ -24,7 +24,7 @@ impl<T> Debug for ArrayStringShort<T> {
 }
 
 impl<T> Node for ArrayStringShort<T> {
-    // #[instrument(target = "ArrayStringShort")]
+    // #[instrument(target = "ArrayStringShort", level = "debug")]
     fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
         let node = RealmNode::from_ref(realm, ref_)?;
 
@@ -40,12 +40,12 @@ impl<T> ArrayStringShort<T> {
         self.node.header.size as usize
     }
 
-    #[instrument(target = "ArrayStringShort")]
+    #[instrument(target = "ArrayStringShort", level = "debug")]
     pub fn get(&self, index: usize) -> Option<&str> {
         Self::get_static(&self.node, index)
     }
 
-    #[instrument(target = "ArrayStringShort")]
+    #[instrument(target = "ArrayStringShort", level = "debug")]
     pub fn get_static(node: &RealmNode, index: usize) -> Option<&str> {
         let width = node.header.width() as usize;
         if width == 0 {
@@ -70,7 +70,7 @@ impl<T> ArrayStringShort<T> {
 }
 
 impl ArrayStringShort<String> {
-    #[instrument(target = "ArrayStringShort")]
+    #[instrument(target = "ArrayStringShort", level = "debug")]
     pub fn get_strings(&self) -> Vec<String> {
         (0..self.node.header.size as usize)
             .map(|i| self.get(i).map(|s| s.to_string()).unwrap_or_default())
@@ -80,7 +80,7 @@ impl ArrayStringShort<String> {
 
 #[allow(unused)]
 impl ArrayStringShort<Option<String>> {
-    #[instrument(target = "ArrayStringShort")]
+    #[instrument(target = "ArrayStringShort", level = "debug")]
     pub fn get_strings(&self) -> Vec<Option<String>> {
         (0..self.node.header.size as usize)
             .map(|i| self.get(i).map(|s| s.to_string()))
@@ -90,7 +90,7 @@ impl ArrayStringShort<Option<String>> {
 
 #[allow(unused)]
 impl ArrayStringShort<&str> {
-    #[instrument(target = "ArrayStringShort")]
+    #[instrument(target = "ArrayStringShort", level = "debug")]
     pub fn get_strings(&self) -> Vec<&str> {
         (0..self.node.header.size as usize)
             .map(|i| self.get(i).unwrap_or_default())

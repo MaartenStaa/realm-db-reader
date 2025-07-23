@@ -19,7 +19,7 @@ pub struct IntegerArray<T> {
 }
 
 impl<T> Node for IntegerArray<T> {
-    // #[instrument(target = "IntegerArray")]
+    // #[instrument(target = "IntegerArray", level = "debug")]
     fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
         let array = ArrayBasic::from_ref(realm, ref_)?;
 
@@ -85,7 +85,7 @@ impl<T> IntegerArray<T>
 where
     T: FromU64 + Debug,
 {
-    #[instrument(target = "IntegerArray")]
+    #[instrument(target = "IntegerArray", level = "debug")]
     pub fn get_integers_generic(&self) -> Vec<T> {
         (0..self.array.node.header.size as usize)
             .map(|i| T::from_u64(self.array.get(i)))

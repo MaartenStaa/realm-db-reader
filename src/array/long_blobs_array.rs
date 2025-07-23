@@ -14,7 +14,7 @@ pub struct LongBlobsArray {
 }
 
 impl Node for LongBlobsArray {
-    #[instrument(target = "LongBlobsArray")]
+    #[instrument(target = "LongBlobsArray", level = "debug")]
     fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
         let array = ArrayBasic::from_ref(realm, ref_)?;
 
@@ -36,7 +36,7 @@ impl LongBlobsArray {
         self.array.node.header.size as usize
     }
 
-    #[instrument(target = "LongBlobsArray")]
+    #[instrument(target = "LongBlobsArray", level = "debug")]
     pub fn get(&self, index: usize) -> anyhow::Result<Option<Vec<u8>>> {
         let Some(ref_) = self.array.get_ref(index) else {
             warn!("get: index={index} returned NULL");

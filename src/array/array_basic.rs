@@ -37,14 +37,14 @@ impl ArrayBasic {
         Ok(Self { node })
     }
 
-    #[instrument(target = "Array")]
+    #[instrument(target = "Array", level = "debug")]
     pub fn get(&self, index: usize) -> u64 {
         let width = self.node.header.width();
 
         self.get_direct(width, index)
     }
 
-    #[instrument(target = "Array")]
+    #[instrument(target = "Array", level = "debug")]
     pub fn get_ref(&self, index: usize) -> Option<RealmRef> {
         let width = self.node.header.width();
         let ref_ = self.get_direct(width, index);
@@ -58,7 +58,7 @@ impl ArrayBasic {
         Some(RealmRef(ref_ as usize))
     }
 
-    #[instrument(target = "Array")]
+    #[instrument(target = "Array", level = "debug")]
     pub fn get_ref_or_tagged_value(&self, index: usize) -> Option<RefOrTaggedValue> {
         let width = self.node.header.width();
         let value = self.get_direct(width, index);
@@ -70,7 +70,7 @@ impl ArrayBasic {
         Some(RefOrTaggedValue::from_raw(value))
     }
 
-    #[instrument(target = "Array")]
+    #[instrument(target = "Array", level = "debug")]
     pub fn get_node<N>(&self, index: usize) -> anyhow::Result<N>
     where
         N: Node,
@@ -81,7 +81,7 @@ impl ArrayBasic {
         self.get_node_at_ref(ref_.unwrap())
     }
 
-    #[instrument(target = "Array")]
+    #[instrument(target = "Array", level = "debug")]
     pub fn get_node_at_ref<N>(&self, ref_: RealmRef) -> anyhow::Result<N>
     where
         N: Node,
@@ -95,7 +95,7 @@ impl ArrayBasic {
         N::from_ref(self.node.realm.clone(), ref_)
     }
 
-    #[instrument(target = "Array")]
+    #[instrument(target = "Array", level = "debug")]
     fn get_direct(&self, width: u8, index: usize) -> u64 {
         read_array_value(self.node.payload(), width, index)
     }

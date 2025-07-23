@@ -35,7 +35,7 @@ impl Index {
     const KEY_SIZE: u8 = 4; // 32 bits for the key
     const KEY_SIZE_BITS: u8 = Self::KEY_SIZE * 8;
 
-    #[instrument(target = "Index", skip(self))]
+    #[instrument(target = "Index", level = "debug", skip(self))]
     pub fn find_first(&self, value: &Value) -> anyhow::Result<Option<usize>> {
         let value = Self::coerce_to_string(value);
 

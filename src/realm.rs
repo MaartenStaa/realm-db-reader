@@ -181,7 +181,7 @@ impl Debug for Realm {
 }
 
 impl Realm {
-    #[instrument(target = "Realm")]
+    #[instrument(target = "Realm", level = "debug")]
     pub fn open(path: impl AsRef<Path> + Debug) -> anyhow::Result<Self> {
         let file = std::fs::File::open(path)?;
         let mmap = unsafe { Mmap::map(&file)? };
@@ -247,7 +247,7 @@ impl Debug for RealmNode {
 }
 
 impl Node for RealmNode {
-    // #[instrument(target = "RealmNode")]
+    // #[instrument(target = "RealmNode", level = "debug")]
     fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
         let header = realm.header(ref_)?;
         let cached_payload_len = header.payload_len();

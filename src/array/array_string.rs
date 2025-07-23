@@ -28,7 +28,7 @@ impl<T> Debug for ArrayString<T> {
 }
 
 impl<T> Node for ArrayString<T> {
-    // #[instrument(target = "ArrayString")]
+    // #[instrument(target = "ArrayString", level = "debug")]
     fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
         let node = RealmNode::from_ref(Arc::clone(&realm), ref_)?;
 
@@ -82,7 +82,7 @@ impl<T> ArrayString<T> {
         }
     }
 
-    #[instrument(target = "ArrayString")]
+    #[instrument(target = "ArrayString", level = "debug")]
     fn get_inner(&self, index: usize) -> anyhow::Result<Option<String>> {
         match &self.inner {
             ArrayStringInner::Short(short) => Ok(short.get(index).map(|s| s.to_string())),
@@ -110,7 +110,7 @@ impl<T> ArrayString<T> {
         unsafe { String::from_utf8_unchecked(bytes) }
     }
 
-    #[instrument(target = "ArrayString")]
+    #[instrument(target = "ArrayString", level = "debug")]
     fn get_strings_internal(&self) -> anyhow::Result<Vec<Option<String>>> {
         (0..self.size)
             .map(|index| self.get_inner(index))
@@ -119,12 +119,12 @@ impl<T> ArrayString<T> {
 }
 
 impl ArrayString<String> {
-    #[instrument(target = "ArrayString")]
+    #[instrument(target = "ArrayString", level = "debug")]
     pub fn get_string(&self, index: usize) -> anyhow::Result<Option<String>> {
         self.get_inner(index)
     }
 
-    #[instrument(target = "ArrayString")]
+    #[instrument(target = "ArrayString", level = "debug")]
     pub fn get_strings(&self) -> anyhow::Result<Vec<String>> {
         Ok(self
             .get_strings_internal()?
@@ -135,7 +135,7 @@ impl ArrayString<String> {
 }
 
 impl ArrayString<Option<String>> {
-    #[instrument(target = "ArrayString")]
+    #[instrument(target = "ArrayString", level = "debug")]
     pub fn get_strings(&self) -> anyhow::Result<Vec<Option<String>>> {
         self.get_strings_internal()
     }
