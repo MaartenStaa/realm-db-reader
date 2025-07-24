@@ -42,7 +42,7 @@ impl Index {
         let mut value_offset: usize = 0;
         let mut key = Self::create_key(&value);
 
-        log::debug!(target: "Index", "finding first occurrence of '{value}', key = {key:?}");
+        log::debug!(target: "Index", "finding first occurrence of '{value:?}', key = {key:?}");
 
         let mut current_index = Cow::Borrowed(self);
         loop {
@@ -56,10 +56,12 @@ impl Index {
                 current_index.offsets.node.header.size as usize,
                 key as u64,
             );
-            log::debug!(target: "Index", "lower_bound: value = {value:?}, key = {key:?}, pos = {pos}",);
+            log::debug!(target: "Index", "lower_bound: value = {value:?}, key = {key:?}, pos = {pos}");
 
             // If key is outside range, we know there can be no match.
             if pos == current_index.offsets.node.header.size as usize {
+                log::info!(target: "Index", "No match found for key = {key:?} in current_index");
+
                 return Ok(None);
             }
 
@@ -70,19 +72,19 @@ impl Index {
             let ref_ = current_index.array.get(pos_refs);
 
             if current_index.array.node.header.is_inner_bptree() {
-                current_index = Cow::Owned(Self::from_ref(
-                    Arc::clone(&self.array.node.realm),
-                    RealmRef::new(ref_ as usize),
-                )?);
+                let ref_ = RealmRef::new(ref_ as usize);
+                current_index =
+                    Cow::Owned(Self::from_ref(Arc::clone(&self.array.node.realm), ref_)?);
+
+                log::info!(target: "Index", "Going to sub-index at {ref_:?} (current was inner B+Tree)");
+
                 continue;
             }
 
             let stored_key = current_index.offsets.get(pos) as KeyType;
             if stored_key != key {
                 log::warn!(
-                    target: "Index", "Key mismatch: stored_key = {stored_key:?} ({}), expected key = {key:?} ({}) at pos = {pos}",
-                    str::from_utf8(&stored_key.to_le_bytes()[..4])?,
-                    str::from_utf8(&key.to_le_bytes()[..4])?
+                    target: "Index", "Key mismatch: stored_key = {stored_key:?}, expected key = {key:?} at pos = {pos}",
                 );
 
                 return Ok(None);
@@ -93,16 +95,28 @@ impl Index {
                     return Ok(Some(row_index as usize));
                 }
                 RefOrTaggedValue::Ref(ref_) => {
-                    let array = ArrayBasic::from_ref(Arc::clone(&self.array.node.realm), ref_)?;
+                    let array = unsafe {
+                        ArrayBasic::from_ref_bypass_bptree(
+                            Arc::clone(&self.array.node.realm),
+                            ref_,
+                        )?
+                    };
                     let is_sub_index = array.node.header.context_flag();
 
                     if !is_sub_index {
+                        log::info!(
+                            target: "Index",
+                            "Found row index at pos {pos}: {ref_:?}, value = {:?}",
+                            value
+                        );
                         return Ok(Some(array.get(0) as usize));
                     }
 
                     // Otherwise, go into the sub-index.
                     current_index =
                         Cow::Owned(Self::from_ref(Arc::clone(&self.array.node.realm), ref_)?);
+
+                    log::info!(target: "Index", "going to sub-index at {ref_:?}");
 
                     // Go to next key part of the string. If the offset exceeds the string length, the key will be 0
                     value_offset += Self::KEY_SIZE as usize;
@@ -111,35 +125,16 @@ impl Index {
                     key = Self::create_key_with_offset(&value, value_offset);
                 }
             }
-
-            // Get entry under key
-            // match &self.components[pos] {
-            //     IndexComponent::RowIndex(n) => {
-            //         return Some(*n);
-            //     }
-            //     IndexComponent::RowIndexes(ns) => {
-            //         return Some(ns[0]);
-            //     }
-            //     IndexComponent::SubIndex(sub_index) => {
-            //         // Update key if we're not in an inner node
-            //         if !current_index.is_inner {
-            //             value_offset += Self::KEY_SIZE as usize;
-            //             key = Self::create_key_with_offset(&value, value_offset);
-            //         }
-            //
-            //         current_index = sub_index;
-            //     }
-            // }
         }
     }
 
-    fn create_key(value: &str) -> KeyType {
+    fn create_key(value: &[u8]) -> KeyType {
         let mut key: KeyType = 0;
 
-        for (i, c) in value.char_indices().take(Self::KEY_SIZE as usize) {
+        for (i, c) in value.iter().enumerate().take(Self::KEY_SIZE as usize) {
             // Index 0 shift left by 24, index 1 by 16...
             let shl = (Self::KEY_SIZE - 1 - i as u8) * 8;
-            key |= (c as u32) << shl;
+            key |= (*c as u32) << shl;
         }
 
         key
@@ -148,7 +143,7 @@ impl Index {
     /// Index works as follows: All non-NULL values are stored as if they had appended an 'X'
     /// character at the end. So "foo" is stored as if it was "fooX", and "" (empty string) is
     /// stored as "X". And NULLs are stored as empty strings.
-    fn create_key_with_offset(value: &str, offset: usize) -> u32 {
+    fn create_key_with_offset(value: &[u8], offset: usize) -> u32 {
         if offset > value.len() {
             return 0;
         }
@@ -158,21 +153,35 @@ impl Index {
         if tail < Self::KEY_SIZE as usize {
             let mut buf = [b'\0'; Self::KEY_SIZE as usize];
             buf[tail] = b'X';
-            for (i, c) in value.char_indices() {
-                buf[i] = c as u8;
+            for (i, c) in value.iter().skip(offset).enumerate() {
+                buf[i] = *c;
             }
-            return Self::create_key(&unsafe { String::from_utf8_unchecked(buf.to_vec()) });
+            return Self::create_key(&buf);
         }
 
         Self::create_key(&value[offset..])
     }
 
-    fn coerce_to_string(value: &Value) -> Cow<'_, str> {
+    fn coerce_to_string(value: &Value) -> Cow<'_, [u8]> {
         match value {
-            Value::String(s) => Cow::Borrowed(s),
-            Value::Int(n) => Cow::Owned(n.to_string()),
-            Value::Bool(b) => Cow::Owned(b.to_string()),
-            _ => unimplemented!("Unsupported value type for coercion to string"),
+            Value::String(s) => Cow::Borrowed(s.as_bytes()),
+            Value::Int(n) => {
+                let mut str = Vec::with_capacity(std::mem::size_of_val(n));
+                str.extend_from_slice(&n.to_le_bytes());
+                Cow::Owned(str)
+            }
+            Value::Bool(b) => Cow::Owned(vec![if *b { 1 } else { 0 }]),
+            Value::Timestamp(dt) => {
+                let s = dt.timestamp() as u64;
+                let ns = dt.timestamp_subsec_nanos();
+                log::debug!(target: "Index", "coercing timestamp {dt:?} to string, value = {s} . {ns}");
+                let mut str =
+                    Vec::with_capacity(std::mem::size_of_val(&s) + std::mem::size_of_val(&ns));
+                str.extend_from_slice(&s.to_le_bytes());
+                str.extend_from_slice(&ns.to_le_bytes());
+                Cow::Owned(str)
+            }
+            _ => unimplemented!("Unsupported value type for coercion to string: {value:?}"),
         }
     }
 
