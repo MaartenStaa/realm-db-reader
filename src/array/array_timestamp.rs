@@ -47,8 +47,9 @@ impl ArrayTimestamp {
             return Ok(None);
         }
 
+        let seconds = i64::from_le_bytes(seconds.to_le_bytes());
         let nanoseconds = self.nanoseconds.get_integer(index)?;
 
-        Ok(DateTime::from_timestamp(seconds as i64, nanoseconds))
+        Ok(DateTime::from_timestamp(seconds, nanoseconds))
     }
 }
