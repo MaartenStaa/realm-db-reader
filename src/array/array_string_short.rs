@@ -49,7 +49,7 @@ impl<T> ArrayStringShort<T> {
     pub fn get_static(node: &RealmNode, index: usize, expectation: Expectation) -> Option<&str> {
         let width = node.header.width() as usize;
         if width == 0 {
-            debug!("get: width is 0, returning None");
+            debug!(target: "ArrayStringShort", "get: width is 0, returning None");
             return match expectation {
                 Expectation::Nullable => None,
                 Expectation::NotNullable => Some(""),
@@ -63,6 +63,7 @@ impl<T> ArrayStringShort<T> {
         }
 
         debug!(
+            target: "ArrayStringShort",
             "get: index={index} width={width} zeroes={zeroes} element_data=0x{}",
             hex::encode(element_data)
         );

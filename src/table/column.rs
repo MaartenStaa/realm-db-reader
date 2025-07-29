@@ -100,6 +100,6 @@ impl Debug for ColumnAttributes {
 
 impl FromU64 for ColumnAttributes {
     fn from_u64(attributes: u64) -> Self {
-        Self(attributes)
+        Self::new(attributes)
     }
 }

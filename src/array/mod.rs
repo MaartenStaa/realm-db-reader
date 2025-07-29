@@ -1,19 +1,17 @@
 mod array_basic;
-mod array_link_list;
 mod array_string;
 mod array_string_short;
-mod array_timestamp;
 mod integer_array;
 mod long_blobs_array;
 mod small_blobs_array;
 
 pub use array_basic::ArrayBasic;
-pub use array_link_list::ArrayLinkList;
 pub use array_string::ArrayString;
 pub use array_string_short::ArrayStringShort;
-pub use array_timestamp::ArrayTimestamp;
 #[allow(unused_imports)]
 pub use integer_array::{FromU64, IntegerArray};
+pub use long_blobs_array::LongBlobsArray;
+pub use small_blobs_array::SmallBlobsArray;
 
 use std::fmt::Debug;
 use std::ops::Add;
@@ -23,7 +21,6 @@ use anyhow::bail;
 use log::debug;
 use tracing::instrument;
 
-use crate::array::long_blobs_array::LongBlobsArray;
 use crate::node::Node;
 use crate::realm::{Realm, RealmNode};
 use crate::utils::read_array_value;
@@ -38,11 +35,9 @@ pub struct Array<T> {
 enum ArrayInner<T> {
     BPTree(BPTreeArray),
     String(Box<ArrayString<T>>),
-    Integer(Box<IntegerArray<T>>),
-    Bool(Box<IntegerArray<u8>>),
+    Integer(Box<IntegerArray>),
+    Bool(Box<IntegerArray>),
     Blob(Box<LongBlobsArray>),
-    LinkList(Box<ArrayLinkList>),
-    Timestamp(Box<ArrayTimestamp>),
 }
 
 #[derive(Debug, Clone)]
@@ -118,7 +113,7 @@ impl Add<usize> for RealmRef {
 #[derive(Debug, Copy, Clone)]
 pub enum RefOrTaggedValue {
     Ref(RealmRef),
-    TaggedRef(u64),
+    TaggedValue(u64),
 }
 
 impl RefOrTaggedValue {
@@ -126,7 +121,7 @@ impl RefOrTaggedValue {
         if value & 1 == 0 {
             Self::Ref(RealmRef(value as usize))
         } else {
-            Self::TaggedRef(value >> 1)
+            Self::TaggedValue(value >> 1)
         }
     }
 
@@ -183,21 +178,20 @@ macro_rules! array_node_impl {
     };
 }
 
-array_node_impl!(bool, Bool, IntegerArray::<u8>);
-array_node_impl!(u8, Integer, IntegerArray::<u8>);
-array_node_impl!(u16, Integer, IntegerArray::<u16>);
-array_node_impl!(u32, Integer, IntegerArray::<u32>);
-array_node_impl!(u64, Integer, IntegerArray::<u64>);
-array_node_impl!(i8, Integer, IntegerArray::<i8>);
-array_node_impl!(i16, Integer, IntegerArray::<i16>);
-array_node_impl!(i32, Integer, IntegerArray::<i32>);
-array_node_impl!(i64, Integer, IntegerArray::<i64>);
-array_node_impl!(f32, Integer, IntegerArray::<f32>);
-array_node_impl!(f64, Integer, IntegerArray::<f64>);
-array_node_impl!(usize, Integer, IntegerArray::<usize>);
+array_node_impl!(bool, Bool, IntegerArray);
+array_node_impl!(u8, Integer, IntegerArray);
+array_node_impl!(u16, Integer, IntegerArray);
+array_node_impl!(u32, Integer, IntegerArray);
+array_node_impl!(u64, Integer, IntegerArray);
+array_node_impl!(i8, Integer, IntegerArray);
+array_node_impl!(i16, Integer, IntegerArray);
+array_node_impl!(i32, Integer, IntegerArray);
+array_node_impl!(i64, Integer, IntegerArray);
+array_node_impl!(f32, Integer, IntegerArray);
+array_node_impl!(f64, Integer, IntegerArray);
+array_node_impl!(usize, Integer, IntegerArray);
 array_node_impl!(String, String, ArrayString::<String>);
 array_node_impl!(Vec<u8>, Blob, LongBlobsArray);
-array_node_impl!(Vec<usize>, LinkList, ArrayLinkList);
 
 impl<T> Array<T>
 where
@@ -270,7 +264,6 @@ where
         match &self.inner {
             ArrayInner::BPTree(bptree) => bptree.total_elements,
             ArrayInner::String(array_string) => array_string.element_count(),
-            ArrayInner::Timestamp(array_timestamp) => array_timestamp.element_count(),
             _ => self.node.header.size as usize,
         }
     }
@@ -332,7 +325,7 @@ macro_rules! array_impl_numeric {
                         Some(RefOrTaggedValue::Ref(ref_)) => {
                             bail!("ref found in get_tagged_integer: {ref_:?}");
                         }
-                        Some(RefOrTaggedValue::TaggedRef(value)) => Ok(Some(value as $type)),
+                        Some(RefOrTaggedValue::TaggedValue(value)) => Ok(Some(value as $type)),
                         None => Ok(None),
                     },
                     _ => unreachable!("get_tagged_integer called on non-integer array"),
@@ -365,21 +358,6 @@ impl Array<bool> {
                 Ok(value != 0)
             }
             _ => unreachable!("get_bool called on non-bool array"),
-        }
-    }
-}
-
-impl Array<Vec<usize>> {
-    pub fn get_link_list(&self, index: usize) -> anyhow::Result<Option<Vec<usize>>> {
-        match &self.inner {
-            ArrayInner::BPTree(bptree) => {
-                let (child_index, index_in_child) = bptree.find_bptree_child(index);
-                let child: Self = self.get_node(child_index)?;
-
-                child.get_link_list(index_in_child)
-            }
-            ArrayInner::LinkList(array_link_list) => array_link_list.get(index),
-            _ => unreachable!("get_link_list called on non-link list array"),
         }
     }
 }

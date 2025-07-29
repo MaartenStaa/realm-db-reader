@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use log::warn;
+use log::debug;
 use tracing::instrument;
 
 use crate::array::long_blobs_array::LongBlobsArray;
@@ -35,7 +35,7 @@ impl<T> Node for ArrayString<T> {
         let has_long_strings = node.header.has_refs();
         let inner: ArrayStringInner<T>;
         if !has_long_strings {
-            warn!(
+            debug!(
                 target: "ArrayString",
                 "has_long_strings is false, treating as a short string array."
             );
@@ -49,14 +49,14 @@ impl<T> Node for ArrayString<T> {
         } else {
             let use_big_blobs = node.header.context_flag();
             if !use_big_blobs {
-                warn!(
+                debug!(
                     target: "ArrayString",
                     "has_long_string is true, use_big_blobs is false, treating as a small blobs array."
                 );
 
                 inner = ArrayStringInner::SmallBlobs(SmallBlobsArray::from_ref(realm, ref_)?);
             } else {
-                warn!(
+                debug!(
                     target: "ArrayString",
                     "has_long_string is true, use_big_blobs is true, treating as a long blobs array."
                 );
@@ -97,7 +97,7 @@ impl<T> ArrayString<T> {
         }
     }
 
-    fn string_from_bytes(mut bytes: Vec<u8>) -> String {
+    pub fn string_from_bytes(mut bytes: Vec<u8>) -> String {
         assert!(
             !bytes.is_empty(),
             "string cannot be empty (should have a trailing \\0"

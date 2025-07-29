@@ -46,7 +46,7 @@ impl LongBlobsArray {
             });
         };
 
-        let item: RealmNode = self.array.get_node_at_ref(ref_)?;
+        let item: RealmNode = RealmNode::from_ref(Arc::clone(&self.array.node.realm), ref_)?;
         let payload = item.payload();
         let size = item.header.size as usize;
 

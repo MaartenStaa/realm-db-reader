@@ -144,7 +144,7 @@ impl Realm {
 
     fn print_payload(payload: &[u8], width: u8, size: usize, depth: usize) {
         let print_integers = size > 0;
-        const MAX_LEN: usize = 120;
+        const MAX_LEN: usize = 240;
         if print_integers {
             indent(depth);
             let start = "  integers: [";

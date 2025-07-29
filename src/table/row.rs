@@ -1,29 +1,30 @@
 use std::collections::HashMap;
 
 use crate::{
-    table::spec::ColumnSpec,
+    column::Column,
     value::{Backlink, Value},
 };
 
 #[derive(Debug)]
 pub struct Row<'a> {
-    columns: HashMap<&'a str, usize>,
+    pub columns: HashMap<&'a str, usize>,
     values: &'a [Value],
 }
 
 impl<'a> Row<'a> {
-    pub fn new(row: &'a [Value], columns: &'a [ColumnSpec]) -> Self {
+    pub fn new(row: &'a [Value], columns: &'a [Box<dyn Column>]) -> Self {
         Self {
             columns: columns
                 .iter()
                 .enumerate()
-                .filter_map(|(index, spec)| match spec {
-                    ColumnSpec::Regular { name, .. } => Some((name.as_str(), index)),
-                    ColumnSpec::BackLink { .. } => None,
-                })
+                .filter_map(|(index, spec)| spec.name().map(|name| (name, index)))
                 .collect(),
             values: row,
         }
+    }
+
+    pub fn value(&self, index: usize) -> &'a Value {
+        &self.values[index]
     }
 
     pub fn values(&self) -> &'a [Value] {
@@ -36,10 +37,10 @@ impl<'a> Row<'a> {
             .and_then(|&index| self.values.get(index))
     }
 
-    pub fn backlinks(&self) -> impl Iterator<Item = Backlink> {
+    pub fn backlinks(&self) -> impl Iterator<Item = &Backlink> {
         self.values.iter().filter_map(|value| {
             if let Value::BackLink(backlink) = value {
-                Some(*backlink)
+                Some(backlink)
             } else {
                 None
             }

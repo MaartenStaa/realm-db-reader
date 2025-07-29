@@ -2,7 +2,6 @@ use log::warn;
 use tracing::instrument;
 
 use crate::array::{ArrayBasic, ArrayStringShort, Expectation};
-use crate::build::Build;
 use crate::table::Table;
 
 #[derive(Debug)]
@@ -12,9 +11,9 @@ pub struct Group {
     tables: Vec<Option<Table>>,
 }
 
-impl Build for Group {
+impl Group {
     #[instrument(target = "Group", level = "debug")]
-    fn build(array: ArrayBasic) -> anyhow::Result<Self> {
+    pub fn build(array: ArrayBasic) -> anyhow::Result<Self> {
         let table_names = {
             let array: ArrayStringShort<String> = array.get_node(0)?;
             array.get_strings(Expectation::NotNullable)
@@ -73,6 +72,10 @@ impl Group {
         &self.table_names[index]
     }
 
+    pub fn get_table_names(&self) -> &[String] {
+        &self.table_names
+    }
+
     #[instrument(target = "Group", level = "debug", skip(self), fields(table_names = ?self.table_names))]
     fn get_or_load_table(&mut self, index: usize) -> anyhow::Result<&mut Table> {
         if self.tables[index].is_some() {
@@ -81,7 +84,7 @@ impl Group {
 
         let table_array = self.tables_array.get_node(index)?;
 
-        let table = Table::build(table_array)?;
+        let table = Table::build(table_array, index)?;
         self.tables[index] = Some(table);
 
         Ok(self.tables[index].as_mut().unwrap())

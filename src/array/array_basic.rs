@@ -5,25 +5,27 @@ use log::debug;
 use tracing::instrument;
 
 use crate::array::{RealmRef, RefOrTaggedValue};
-use crate::node::Node;
+use crate::node::{Node, NodeWithContext};
 use crate::realm::{Realm, RealmNode};
 use crate::utils::read_array_value;
 
 #[derive(Debug, Clone)]
 pub struct ArrayBasic {
     pub node: RealmNode,
+    width: u8,
 }
 
 impl Node for ArrayBasic {
     fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
         let node = RealmNode::from_ref(Arc::clone(&realm), ref_)?;
+        let width = node.header.width();
 
-        assert!(
-            !node.header.is_inner_bptree(),
-            "cannot use ArrayBasic with B+Tree inner nodes (node {node:?})"
-        );
+        // assert!(
+        //     !node.header.is_inner_bptree(),
+        //     "cannot use ArrayBasic with B+Tree inner nodes (node {node:?})"
+        // );
 
-        Ok(Self { node })
+        Ok(Self { node, width })
     }
 }
 
@@ -33,21 +35,31 @@ impl ArrayBasic {
         ref_: RealmRef,
     ) -> anyhow::Result<Self> {
         let node = RealmNode::from_ref(Arc::clone(&realm), ref_)?;
+        let width = node.header.width();
 
-        Ok(Self { node })
+        Ok(Self { node, width })
     }
 
     #[instrument(target = "Array", level = "debug")]
     pub fn get(&self, index: usize) -> u64 {
-        let width = self.node.header.width();
+        assert!(
+            index < self.node.header.size as usize,
+            "Index out of bounds: {index} >= {}",
+            self.node.header.size
+        );
 
-        self.get_direct(width, index)
+        self.get_direct(self.width, index)
     }
 
     #[instrument(target = "Array", level = "debug")]
     pub fn get_ref(&self, index: usize) -> Option<RealmRef> {
-        let width = self.node.header.width();
-        let ref_ = self.get_direct(width, index);
+        assert!(
+            index < self.node.header.size as usize,
+            "Index out of bounds: {index} >= {}",
+            self.node.header.size
+        );
+
+        let ref_ = self.get_direct(self.width, index);
 
         if ref_ == 0 {
             return None;
@@ -60,8 +72,13 @@ impl ArrayBasic {
 
     #[instrument(target = "Array", level = "debug")]
     pub fn get_ref_or_tagged_value(&self, index: usize) -> Option<RefOrTaggedValue> {
-        let width = self.node.header.width();
-        let value = self.get_direct(width, index);
+        assert!(
+            index < self.node.header.size as usize,
+            "Index out of bounds: {index} >= {}",
+            self.node.header.size
+        );
+
+        let value = self.get_direct(self.width, index);
 
         if value == 0 {
             return None;
@@ -77,18 +94,12 @@ impl ArrayBasic {
     {
         let ref_ = self.get_ref(index);
 
-        // TODO
-        self.get_node_at_ref(ref_.unwrap())
-    }
+        // TODO: Don't unwrap here
+        let ref_ = ref_.unwrap();
 
-    #[instrument(target = "Array", level = "debug")]
-    pub fn get_node_at_ref<N>(&self, ref_: RealmRef) -> anyhow::Result<N>
-    where
-        N: Node,
-    {
         debug!(
             target: "Array",
-            "get_node_at_offset: offset={ref_:?} payload=0x{}",
+            "get_node: offset={ref_:?} payload=0x{}",
             hex::encode(self.node.payload())
         );
 
@@ -96,7 +107,42 @@ impl ArrayBasic {
     }
 
     #[instrument(target = "Array", level = "debug")]
+    pub fn get_node_with_context<N: NodeWithContext<T>, T: Debug>(
+        &self,
+        index: usize,
+        context: T,
+    ) -> anyhow::Result<N> {
+        let ref_ = self.get_ref(index);
+
+        // TODO: Don't unwrap here
+        let ref_ = ref_.unwrap();
+
+        debug!(
+            target: "Array",
+            "get_node: offset={ref_:?} payload=0x{}",
+            hex::encode(self.node.payload())
+        );
+
+        N::from_ref_with_context(self.node.realm.clone(), ref_, context)
+    }
+
+    pub fn front(&self) -> u64 {
+        assert!(self.node.header.size > 0, "Array is empty");
+
+        read_array_value(self.node.payload(), self.width, 0)
+    }
+
+    pub fn back(&self) -> u64 {
+        let size = self.node.header.size as usize;
+        if size == 0 {
+            return 0;
+        }
+
+        read_array_value(self.node.payload(), self.width, size - 1)
+    }
+
+    #[instrument(target = "Array", level = "debug")]
     fn get_direct(&self, width: u8, index: usize) -> u64 {
-        read_array_value(self.node.payload(), width, index)
+        read_array_value(self.node.payload(), self.width, index)
     }
 }

@@ -89,6 +89,12 @@ impl Debug for NodeHeader {
     }
 }
 
+pub enum NodeType {
+    InnerBptree,
+    HasRefs,
+    Normal,
+}
+
 impl NodeHeader {
     pub const SIZE: usize = 8;
     pub const DUMMY_CHECKSUM: u32 = 0x4141_4141;
@@ -150,6 +156,16 @@ impl NodeHeader {
         // Ensure 8-byte alignment
         // ((num_bytes + 7) & !7) as usize
         num_bytes as usize
+    }
+
+    pub fn get_type(&self) -> NodeType {
+        if self.is_inner_bptree() {
+            NodeType::InnerBptree
+        } else if self.has_refs() {
+            NodeType::HasRefs
+        } else {
+            NodeType::Normal
+        }
     }
 }
 
