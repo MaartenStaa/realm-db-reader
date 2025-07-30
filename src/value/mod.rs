@@ -1,9 +1,6 @@
 use chrono::{DateTime, Utc};
 
-use crate::{
-    array::RealmRef,
-    table::{Row, Table},
-};
+use crate::table::Row;
 
 mod from;
 mod into;
@@ -18,7 +15,6 @@ pub enum Value {
     OldStringEnum(String),
     Binary(Vec<u8>),
     Table(Vec<Row<'static>>),
-    // Table(RealmRef),
     OldMixed,
     OldDateTime,
     Timestamp(DateTime<Utc>),

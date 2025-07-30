@@ -29,6 +29,7 @@ impl NodeWithContext<LinkListColumnContext> for LinkListLeaf {
     fn from_ref_with_context(
         realm: Arc<Realm>,
         ref_: RealmRef,
+        // TODO: Should this be part of the returned value like with the backlinks?
         _: LinkListColumnContext,
     ) -> anyhow::Result<Self>
     where

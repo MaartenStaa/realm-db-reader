@@ -84,7 +84,7 @@ impl Group {
 
         let table_array = self.tables_array.get_node(index)?.unwrap();
 
-        let table = Table::build(table_array, index)?;
+        let table = Table::build(table_array)?;
         self.tables[index] = Some(table);
 
         Ok(self.tables[index].as_mut().unwrap())

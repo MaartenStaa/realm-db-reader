@@ -1,84 +1,109 @@
-use anyhow::bail;
+//! # Subtable column implementation
+//!
+//! Subtables have multiple layers of indirection:
+//!
+//! [`crate::column::bptree::BpTree`] -> [`SubtableArrayLeaf`] -> [`Table`]
+//!
+//! The first layer, an instance of [`crate::column::bptree::BpTree`], just handles the top-level
+//! array being a B+Tree. Once it finds the node in the top-level data array, it creates and calls
+//! the [`SubtableArrayLeaf`]. At this point, we're either in a sub-array of the B+Tree, or still
+//! in the top level data array.
+//!
+//! There we can just get the row index, and create the [`Table`]. That one receives a reference
+//! to the data array for the subtable for the given row, so we can create the
+//! [`crate::table::TableHeader`] and fetch all rows from it.
 
-use crate::array::{Array, RealmRef};
-use crate::column::Column;
-use crate::node::Node;
+use tracing::instrument;
+
+use crate::array::{Array, RealmRef, RefOrTaggedValue};
+use crate::column::{ArrayLeaf, Column, ColumnImpl, ColumnType};
+use crate::node::{Node, NodeWithContext};
 use crate::realm::Realm;
-use crate::table::ColumnAttributes;
-use crate::value::Value;
+use crate::table::{ColumnAttributes, Row, Table};
+use crate::utils::read_array_value;
 use std::sync::Arc;
 
-#[derive(Debug)]
-pub struct SubtableColumn {
-    header_root: Array,
-    data_root: Array,
-    attributes: ColumnAttributes,
-    // header: TableHeader,
-    name: String,
+#[derive(Debug, Clone, Copy)]
+pub struct SubtableContext {
+    header_ref: RealmRef,
 }
 
-impl SubtableColumn {
-    pub fn new(
+pub struct SubtableColumnType;
+impl ColumnType for SubtableColumnType {
+    type Value = Option<Vec<Row<'static>>>;
+    type LeafType = SubtableArrayLeaf;
+    type LeafContext = SubtableContext;
+
+    const IS_NULLABLE: bool = true;
+}
+
+pub struct SubtableArrayLeaf {
+    root: Array,
+    header_array: Array,
+}
+
+impl NodeWithContext<SubtableContext> for SubtableArrayLeaf {
+    #[instrument(target = "BpTree", level = "debug")]
+    fn from_ref_with_context(
         realm: Arc<Realm>,
-        header_ref: RealmRef,
-        data_ref: RealmRef,
-        attributes: ColumnAttributes,
-        // header: TableHeader,
-        name: String,
-    ) -> anyhow::Result<Self> {
-        let header_root = Array::from_ref(Arc::clone(&realm), header_ref)?;
-        let data_root = Array::from_ref(realm, data_ref)?;
+        ref_: RealmRef,
+        context: SubtableContext,
+    ) -> anyhow::Result<Self>
+    where
+        Self: Sized,
+    {
+        let root = Array::from_ref(Arc::clone(&realm), ref_)?;
+        assert!(
+            !root.node.header.is_inner_bptree(),
+            "SubtableArrayLeaf must not be a B+Tree"
+        );
 
-        // B+Tree subtables not yet implemented
-        assert!(!data_root.node.header.is_inner_bptree());
+        let header_array = Array::from_ref(realm, context.header_ref)?;
 
-        Ok(SubtableColumn {
-            header_root,
-            data_root,
-            attributes,
-            // header,
-            name,
-        })
+        Ok(SubtableArrayLeaf { root, header_array })
     }
 }
 
-impl Column for SubtableColumn {
-    /// Get the value for this column for the row with the given index.
-    fn get(&self, index: usize) -> anyhow::Result<Value> {
-        let Some(array): Option<Array> = self.data_root.get_node(index)? else {
-            return Ok(Value::None);
+impl ArrayLeaf<Option<Vec<Row<'static>>>, SubtableContext> for SubtableArrayLeaf {
+    fn get(&self, index: usize) -> anyhow::Result<Option<Vec<Row<'static>>>> {
+        let Some(data_array) = self.root.get_node(index)? else {
+            return Ok(None);
         };
 
-        dbg!(&array);
-        todo!();
+        Ok(Some(
+            Table::build_from(&self.header_array, data_array)?.get_rows_owned()?,
+        ))
     }
 
-    fn is_null(&self, index: usize) -> anyhow::Result<bool> {
-        Ok(self.data_root.get_ref(index).is_none())
+    fn get_direct(
+        realm: Arc<Realm>,
+        ref_: RealmRef,
+        index: usize,
+        context: SubtableContext,
+    ) -> anyhow::Result<Option<Vec<Row<'static>>>> {
+        let header = realm.header(ref_)?;
+        let payload = realm.payload(ref_, header.payload_len());
+
+        let data_array = match read_array_value(payload, header.width(), index) {
+            0 => return Ok(None),
+            n => match RefOrTaggedValue::from_raw(n) {
+                RefOrTaggedValue::Ref(ref_) => Array::from_ref(Arc::clone(&realm), ref_)?,
+                _ => return Ok(None),
+            },
+        };
+        let header_array = Array::from_ref(realm, context.header_ref)?;
+
+        Ok(Some(
+            Table::build_from(&header_array, data_array)?.get_rows_owned()?,
+        ))
     }
 
-    /// Get the total number of values in this column.
-    fn count(&self) -> anyhow::Result<usize> {
-        bail!("todo: SubtableColumn::count not implemented");
+    fn is_null(&self, index: usize) -> bool {
+        self.root.get_ref(index).is_none()
     }
 
-    /// Get whether this column is nullable.
-    fn nullable(&self) -> bool {
-        self.attributes.is_nullable()
-    }
-
-    fn is_indexed(&self) -> bool {
-        self.attributes.is_indexed()
-    }
-
-    fn name(&self) -> Option<&str> {
-        Some(&self.name)
-    }
-}
-
-impl SubtableColumn {
-    fn root_is_leaf(&self) -> bool {
-        !self.data_root.node.header.is_inner_bptree()
+    fn size(&self) -> usize {
+        self.root.node.header.size as usize
     }
 }
 
@@ -88,10 +113,15 @@ pub fn create_subtable_column(
     header_ref: RealmRef,
     data_ref: RealmRef,
     attributes: ColumnAttributes,
-    // header: TableHeader,
     name: String,
-) -> anyhow::Result<Box<SubtableColumn>> {
+) -> anyhow::Result<Box<dyn Column>> {
     Ok(Box::new(SubtableColumn::new(
-        realm, header_ref, data_ref, attributes, name,
+        realm,
+        data_ref,
+        attributes,
+        Some(name),
+        SubtableContext { header_ref },
     )?))
 }
+
+pub type SubtableColumn = ColumnImpl<SubtableColumnType>;

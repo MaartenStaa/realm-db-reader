@@ -19,24 +19,24 @@ use crate::value::Value;
 #[derive(Debug)]
 #[allow(unused)]
 pub struct Table {
-    pub index: usize,
-    data_array: Array,
     header: TableHeader,
     indexes: HashMap<usize, Index>,
 }
 
 impl Table {
     #[instrument(target = "Table", level = "debug")]
-    pub fn build(array: Array, index: usize) -> anyhow::Result<Self> {
+    pub fn build(array: Array) -> anyhow::Result<Self> {
+        let header_array = array.get_node(0)?.unwrap();
         let data_array = array.get_node(1)?.unwrap();
-        let header = {
-            let array: Array = array.get_node(0)?.unwrap();
-            TableHeader::build(array, &data_array)?
-        };
+
+        Self::build_from(&header_array, data_array)
+    }
+
+    #[instrument(target = "Table", level = "debug")]
+    pub(crate) fn build_from(header_array: &Array, data_array: Array) -> anyhow::Result<Self> {
+        let header = TableHeader::build(header_array, &data_array)?;
 
         let result = Self {
-            index,
-            data_array,
             header,
             indexes: HashMap::new(),
         };
@@ -58,8 +58,8 @@ impl Table {
     }
 
     #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
-    pub fn get_row<'a>(&'a mut self, index: usize) -> anyhow::Result<Row<'a>> {
-        let values = self.load_row(index)?;
+    pub fn get_row<'a>(&'a self, row_index: usize) -> anyhow::Result<Row<'a>> {
+        let values = self.load_row(row_index)?;
 
         Ok(Row::new(
             values,
@@ -70,6 +70,33 @@ impl Table {
                 .map(|n| n.into())
                 .collect(),
         ))
+    }
+
+    #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
+    pub fn get_row_owned(&self, row_index: usize) -> anyhow::Result<Row<'static>> {
+        let values = self.load_row(row_index)?;
+
+        Ok(Row::new(
+            values,
+            self.header
+                .get_columns()
+                .iter()
+                .filter_map(|c| c.name())
+                .map(|n| n.to_string().into())
+                .collect(),
+        ))
+    }
+
+    #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
+    fn load_row(&self, row_index: usize) -> anyhow::Result<Vec<Value>> {
+        let column_count = self.header.column_count();
+        let mut values = Vec::with_capacity(column_count);
+        for column_index in 0..column_count {
+            log::info!(target: "Table", "loading column {column_index} for row {row_index}");
+            values.push(self.load_column(column_index, row_index)?);
+        }
+
+        Ok(values)
     }
 
     #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
@@ -136,45 +163,33 @@ impl Table {
     }
 
     #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
-    fn load_row(&mut self, row_index: usize) -> anyhow::Result<Vec<Value>> {
-        let column_count = self.header.column_count();
-        let mut values = Vec::with_capacity(column_count);
-        for column_index in 0..column_count {
-            log::info!(target: "Table", "loading column {column_index} for row {row_index}");
-            values.push(self.load_column(column_index, row_index)?);
-        }
-
-        Ok(values)
-    }
-
-    #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
-    pub fn get_rows<'a>(&'a mut self) -> anyhow::Result<Vec<Row<'a>>> {
+    pub fn get_rows<'a>(&'a self) -> anyhow::Result<Vec<Row<'a>>> {
         let row_count = self.row_count()?;
         let mut rows = Vec::with_capacity(row_count);
 
         for i in 0..row_count {
-            // NOTE: Calling `self.get_row` here results in a borrow-checker error, due to the
-            // lifetime on `Row`
-            rows.push(self.load_row(i)?);
+            rows.push(self.get_row(i)?);
         }
 
-        let columns = self.header.get_columns();
-        let column_names = columns
-            .iter()
-            .filter_map(|c| c.name())
-            .map(|n| n.into())
-            .collect::<Vec<_>>();
-
-        Ok(rows
-            .into_iter()
-            .map(|row| Row::new(row, column_names.clone()))
-            .collect())
+        Ok(rows)
     }
 
     #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
-    fn load_column(&mut self, column_index: usize, row_index: usize) -> anyhow::Result<Value> {
+    pub fn get_rows_owned(&self) -> anyhow::Result<Vec<Row<'static>>> {
+        let row_count = self.row_count()?;
+        let mut rows = Vec::with_capacity(row_count);
+
+        for i in 0..row_count {
+            rows.push(self.get_row_owned(i)?);
+        }
+
+        Ok(rows)
+    }
+
+    #[instrument(target = "Table", level = "debug", skip(self))]
+    fn load_column(&self, column_index: usize, row_index: usize) -> anyhow::Result<Value> {
         let column_spec = self.header.get_column(column_index)?;
-        let value = self.read_column_row(column_spec, row_index)?;
+        let value = column_spec.get(row_index)?;
 
         debug!(
             target: "Table",
@@ -183,15 +198,6 @@ impl Table {
         );
 
         Ok(value)
-    }
-
-    #[instrument(target = "Table", level = "debug", skip(self))]
-    fn read_column_row(
-        &self,
-        column_spec: &'_ dyn Column,
-        row_index: usize,
-    ) -> anyhow::Result<Value> {
-        column_spec.get(row_index)
     }
 
     // #[instrument(target = "Table", level = "debug", skip(self))]

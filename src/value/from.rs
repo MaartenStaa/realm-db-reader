@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 
+use crate::table::Row;
 use crate::value::{Backlink, Value};
 
 impl From<i64> for Value {
@@ -41,6 +42,12 @@ impl From<Vec<usize>> for Value {
 impl From<Backlink> for Value {
     fn from(value: Backlink) -> Self {
         Value::BackLink(value)
+    }
+}
+
+impl From<Vec<Row<'static>>> for Value {
+    fn from(value: Vec<Row<'static>>) -> Self {
+        Value::Table(value)
     }
 }
 

@@ -228,7 +228,7 @@ impl TableHeader {
 
 impl TableHeader {
     #[instrument(target = "TableHeader", level = "debug")]
-    pub(crate) fn build(header_array: Array, data_array: &Array) -> anyhow::Result<Self> {
+    pub(crate) fn build(header_array: &Array, data_array: &Array) -> anyhow::Result<Self> {
         let column_types = {
             let array: IntegerArray = header_array.get_node(0)?.unwrap();
             array
