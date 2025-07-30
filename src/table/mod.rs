@@ -22,8 +22,6 @@ pub struct Table {
     pub index: usize,
     data_array: Array,
     header: TableHeader,
-    data_columns: Vec<Vec<Option<Value>>>,
-    data_rows: Vec<Option<Vec<Value>>>,
     indexes: HashMap<usize, Index>,
 }
 
@@ -36,14 +34,10 @@ impl Table {
             TableHeader::build(array, &data_array)?
         };
 
-        let data_columns = (0..header.column_count()).map(|_| vec![]).collect();
-
         let result = Self {
             index,
             data_array,
             header,
-            data_columns,
-            data_rows: vec![],
             indexes: HashMap::new(),
         };
 
@@ -53,26 +47,9 @@ impl Table {
 }
 
 impl Table {
-    // #[instrument(target = "Table", level = "debug")]
-    // fn new_for_subtable(header: TableHeader, data_array: ArrayBasic) -> Self {
-    //     let data_columns = (0..header.column_count()).map(|_| vec![]).collect();
-    //
-    //     Self {
-    //         data_array,
-    //         header,
-    //         data_columns,
-    //         data_rows: vec![],
-    //         indexes: HashMap::new(),
-    //     }
-    // }
-
     pub fn get_column_spec(&self, column_index: usize) -> anyhow::Result<&dyn Column> {
         self.header.get_column(column_index)
     }
-
-    // pub fn get_column_specs(&self) -> &[ColumnSpec] {
-    //     self.header.get_columns()
-    // }
 
     #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
     pub fn row_count(&self) -> anyhow::Result<usize> {
@@ -82,11 +59,16 @@ impl Table {
 
     #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
     pub fn get_row<'a>(&'a mut self, index: usize) -> anyhow::Result<Row<'a>> {
-        self.ensure_row_loaded(index)?;
+        let values = self.load_row(index)?;
 
         Ok(Row::new(
-            self.data_rows[index].as_ref().unwrap(),
-            self.header.get_columns(),
+            values,
+            self.header
+                .get_columns()
+                .iter()
+                .filter_map(|c| c.name())
+                .map(|n| n.into())
+                .collect(),
         ))
     }
 
@@ -154,89 +136,53 @@ impl Table {
     }
 
     #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
-    fn ensure_row_loaded(&mut self, index: usize) -> anyhow::Result<()> {
-        if self.data_rows.len() > index && self.data_rows[index].is_some() {
-            return Ok(());
+    fn load_row(&mut self, row_index: usize) -> anyhow::Result<Vec<Value>> {
+        let column_count = self.header.column_count();
+        let mut values = Vec::with_capacity(column_count);
+        for column_index in 0..column_count {
+            log::info!(target: "Table", "loading column {column_index} for row {row_index}");
+            values.push(self.load_column(column_index, row_index)?);
         }
 
-        self.ensure_columns_loaded(index)?;
-
-        // let mut row = Vec::with_capacity(self.header.column_count());
-        // for i in 0..self.header.column_count() {
-        //     let column_data = &self.data_columns[i][index];
-        //     // TODO: Avoid this clone?
-        //     row.push(column_data.clone().unwrap());
-        // }
-        //
-        // // Manual resize without Clone
-        // // self.data_rows.resize(index + 1, None);
-        // let rows_to_add = index + 1 - self.data_rows.len();
-        // self.data_rows.extend((0..rows_to_add).map(|_| None));
-        // self.data_rows[index] = Some(row);
-
-        Ok(())
+        Ok(values)
     }
 
     #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
     pub fn get_rows<'a>(&'a mut self) -> anyhow::Result<Vec<Row<'a>>> {
         let row_count = self.row_count()?;
-        if self.data_rows.len() < row_count || self.data_rows.iter().any(|r| r.is_none()) {
-            for i in 0..row_count {
-                self.get_row(i)?;
-            }
+        let mut rows = Vec::with_capacity(row_count);
+
+        for i in 0..row_count {
+            // NOTE: Calling `self.get_row` here results in a borrow-checker error, due to the
+            // lifetime on `Row`
+            rows.push(self.load_row(i)?);
         }
 
-        Ok(self
-            .data_rows
+        let columns = self.header.get_columns();
+        let column_names = columns
             .iter()
-            .map(|r| Row::new(r.as_ref().unwrap().as_slice(), self.header.get_columns()))
+            .filter_map(|c| c.name())
+            .map(|n| n.into())
+            .collect::<Vec<_>>();
+
+        Ok(rows
+            .into_iter()
+            .map(|row| Row::new(row, column_names.clone()))
             .collect())
     }
 
     #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
-    fn ensure_columns_loaded(&mut self, row_index: usize) -> anyhow::Result<()> {
-        for column_index in 0..self.header.column_count() {
-            log::info!(target: "Table", "loading column {column_index} for row {row_index}");
-            self.ensure_column_loaded(column_index, row_index)?;
-        }
-
-        Ok(())
-    }
-
-    #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
-    fn ensure_column_loaded(
-        &mut self,
-        column_index: usize,
-        row_index: usize,
-    ) -> anyhow::Result<()> {
-        // Ensure the column array is long enough (pre-fill with None)
-        if self.data_columns[column_index].len() <= row_index {
-            debug!(
-                target: "Table",
-                "Resizing column {column_index} to fit row {row_index}"
-            );
-            self.data_columns[column_index].resize(row_index + 1, None);
-        }
-
-        if self.data_columns[column_index][row_index].is_some() {
-            debug!(
-                target: "Table",
-                "Column {column_index} at row {row_index} is already loaded"
-            );
-            return Ok(());
-        }
-
+    fn load_column(&mut self, column_index: usize, row_index: usize) -> anyhow::Result<Value> {
         let column_spec = self.header.get_column(column_index)?;
-        self.data_columns[column_index][row_index] =
-            Some(self.read_column_row(column_spec, row_index)?);
+        let value = self.read_column_row(column_spec, row_index)?;
 
         debug!(
             target: "Table",
             "Loaded column {column_index} at row {row_index}: {:?}",
-            self.data_columns[column_index][row_index]
+            value
         );
 
-        Ok(())
+        Ok(value)
     }
 
     #[instrument(target = "Table", level = "debug", skip(self))]
@@ -246,117 +192,8 @@ impl Table {
         row_index: usize,
     ) -> anyhow::Result<Value> {
         column_spec.get(row_index)
-        // match column_spec {
-        //     ColumnSpec::Regular {
-        //         type_,
-        //         data_array_index,
-        //         name,
-        //         attributes,
-        //     } => {
-        //         self.read_column_row_regular(*data_array_index, type_, name, attributes, row_index)
-        //     }
-        //     ColumnSpec::BackLink {
-        //         data_array_index,
-        //         attributes,
-        //         origin_table_index,
-        //         origin_column_index,
-        //     } => self.read_column_row_backlink(
-        //         *data_array_index,
-        //         *origin_table_index,
-        //         *origin_column_index,
-        //         attributes,
-        //         row_index,
-        //     ),
-        // }
     }
 
-    // #[instrument(target = "Table", level = "debug", skip(self))]
-    // fn read_column_row_regular(
-    //     &self,
-    //     data_array_index: usize,
-    //     type_: &FatColumnType,
-    //     name: &str,
-    //     attributes: &ColumnAttributes,
-    //     row_index: usize,
-    // ) -> anyhow::Result<Value> {
-    //     match type_ {
-    //         FatColumnType::Thin(type_) => {
-    //             self.read_column_row_thin(data_array_index, type_, name, attributes, row_index)
-    //         }
-    //         FatColumnType::Table(table_header) => self.read_column_row_table(
-    //             data_array_index,
-    //             table_header,
-    //             name,
-    //             attributes,
-    //             row_index,
-    //         ),
-    //         FatColumnType::Link { target_table_index } => self.read_column_row_link(
-    //             data_array_index,
-    //             *target_table_index,
-    //             name,
-    //             attributes,
-    //             row_index,
-    //         ),
-    //         FatColumnType::LinkList { target_table_index } => self.read_column_row_link_list(
-    //             data_array_index,
-    //             *target_table_index,
-    //             name,
-    //             attributes,
-    //             row_index,
-    //         ),
-    //     }
-    // }
-    //
-    // #[instrument(target = "Table", level = "debug", skip(self))]
-    // fn read_column_row_thin(
-    //     &self,
-    //     data_array_index: usize,
-    //     type_: &ThinColumnType,
-    //     _name: &str,
-    //     attributes: &ColumnAttributes,
-    //     row_index: usize,
-    // ) -> anyhow::Result<Value> {
-    //     match type_ {
-    //         ThinColumnType::Int => {
-    //             let array: Array<u64> = self.data_array.get_node(data_array_index)?;
-    //             let value = array.get_integer(row_index)?;
-    //             Ok(Value::Int(value))
-    //         }
-    //         ThinColumnType::Bool => {
-    //             let array: Array<bool> = self.data_array.get_node(data_array_index)?;
-    //             let value = array.get_bool(row_index)?;
-    //             Ok(Value::Bool(value))
-    //         }
-    //         ThinColumnType::String => {
-    //             let array: Array<String> = self.data_array.get_node(data_array_index)?;
-    //             let value = array.get_string(
-    //                 row_index,
-    //                 if attributes.is_nullable() {
-    //                     Expectation::Nullable
-    //                 } else {
-    //                     Expectation::NotNullable
-    //                 },
-    //             )?;
-    //             Ok(match value {
-    //                 Some(string) => Value::String(string),
-    //                 None => Value::None,
-    //             })
-    //         }
-    //         ThinColumnType::Timestamp => {
-    //             let array: ArrayTimestamp = self.data_array.get_node(data_array_index)?;
-    //             let value = array.get(row_index)?;
-    //             Ok(match (value, attributes.is_nullable()) {
-    //                 (Some(value), _) => Value::Timestamp(value),
-    //                 (_, true) => Value::None,
-    //                 (_, false) => {
-    //                     bail!("Expected timestamp value for non-nullable column")
-    //                 }
-    //             })
-    //         }
-    //         _ => unimplemented!("column_type: {:?}", type_),
-    //     }
-    // }
-    //
     // #[instrument(target = "Table", level = "debug", skip(self))]
     // fn read_column_row_table(
     //     &self,
@@ -393,46 +230,5 @@ impl Table {
     //     row_index: usize,
     // ) -> anyhow::Result<Value> {
     //     unimplemented!("link column {name} at index {data_array_index}");
-    // }
-    //
-    // #[instrument(target = "Table", level = "debug", skip(self))]
-    // fn read_column_row_link_list(
-    //     &self,
-    //     data_array_index: usize,
-    //     target_table_index: usize,
-    //     name: &str,
-    //     attributes: &ColumnAttributes,
-    //     row_index: usize,
-    // ) -> anyhow::Result<Value> {
-    //     let array: Array<Vec<usize>> = self.data_array.get_node(data_array_index)?;
-    //     let value = array.get_link_list(row_index)?;
-    //
-    //     Ok(match (value, attributes.is_nullable()) {
-    //         (Some(value), _) => Value::LinkList(value),
-    //         (_, false) => Value::LinkList(vec![]),
-    //         (_, true) => Value::None,
-    //     })
-    // }
-    //
-    // #[instrument(target = "Table", level = "debug", skip(self))]
-    // fn read_column_row_backlink(
-    //     &self,
-    //     data_array_index: usize,
-    //     origin_table_index: usize,
-    //     origin_column_index: usize,
-    //     attributes: &ColumnAttributes,
-    //     row_index: usize,
-    // ) -> anyhow::Result<Value> {
-    //     let array: Array<u64> = self.data_array.get_node(data_array_index)?;
-    //     let value = array.get_tagged_integer(row_index)?;
-    //
-    //     Ok(match value {
-    //         Some(value) => Value::BackLink(Backlink::new(
-    //             origin_table_index,
-    //             origin_column_index,
-    //             value as usize,
-    //         )),
-    //         None => Value::None,
-    //     })
     // }
 }

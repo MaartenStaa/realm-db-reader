@@ -1,61 +1,49 @@
-use std::collections::HashMap;
+use std::{borrow::Cow, collections::HashMap};
 
-use crate::{
-    column::Column,
-    value::{Backlink, Value},
-};
+use crate::value::{Backlink, Value};
 
 #[derive(Debug, Clone)]
 pub struct Row<'a> {
-    pub columns: HashMap<&'a str, usize>,
-    values: &'a [Value],
+    values: HashMap<Cow<'a, str>, Value>,
+    backlinks: Vec<Backlink>,
 }
 
 impl<'a> Row<'a> {
-    pub fn new(row: &'a [Value], columns: &'a [Box<dyn Column>]) -> Self {
-        Self {
-            columns: columns
-                .iter()
-                .enumerate()
-                .filter_map(|(index, spec)| spec.name().map(|name| (name, index)))
-                .collect(),
-            values: row,
-        }
+    pub fn new(mut row: Vec<Value>, column_names: Vec<Cow<'a, str>>) -> Self {
+        let backlinks = row
+            .extract_if(.., |v| matches!(v, Value::BackLink(_)))
+            .map(|v| {
+                v.try_into()
+                    .expect("already matched the right value variant")
+            })
+            .collect();
+        let values = column_names
+            .into_iter()
+            .enumerate()
+            .rev()
+            .map(|(index, name)| (name, row.remove(index)))
+            .collect();
+
+        Self { values, backlinks }
     }
 
-    #[cfg(test)]
-    pub(crate) fn new_with_names(row: &'a [Value], names: &'a [&'a str]) -> Self {
-        Self {
-            columns: names
-                .iter()
-                .enumerate()
-                .map(|(index, &name)| (name, index))
-                .collect(),
-            values: row,
-        }
+    pub fn entries(&self) -> impl Iterator<Item = (&Cow<'a, str>, &Value)> {
+        self.values.iter()
     }
 
-    pub fn value(&self, index: usize) -> &'a Value {
-        &self.values[index]
-    }
-
-    pub fn values(&self) -> &'a [Value] {
-        self.values
+    pub fn values(&self) -> impl Iterator<Item = &Value> {
+        self.values.values()
     }
 
     pub fn get(&self, column_name: &str) -> Option<&Value> {
-        self.columns
-            .get(column_name)
-            .and_then(|&index| self.values.get(index))
+        self.values.get(column_name)
+    }
+
+    pub fn take(&mut self, column_name: &str) -> Option<Value> {
+        self.values.remove(column_name)
     }
 
     pub fn backlinks(&self) -> impl Iterator<Item = &Backlink> {
-        self.values.iter().filter_map(|value| {
-            if let Value::BackLink(backlink) = value {
-                Some(backlink)
-            } else {
-                None
-            }
-        })
+        self.backlinks.iter()
     }
 }

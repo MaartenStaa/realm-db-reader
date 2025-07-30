@@ -1,8 +1,7 @@
 macro_rules! realm_model_field {
     ($row:ident, $field:ident = $alias:expr) => {
-        $row.get($alias)
+        $row.take($alias)
             .ok_or(::anyhow::anyhow!("Missing field: {:?}", $alias))?
-            .clone()
             .try_into()?
     };
     ($row:ident, $field:ident) => {
@@ -16,7 +15,7 @@ macro_rules! realm_model {
         impl<'a> ::core::convert::TryFrom<$crate::table::Row<'a>> for $struct {
             type Error = ::anyhow::Error;
 
-            fn try_from(row: $crate::table::Row<'a>) -> ::anyhow::Result<Self> {
+            fn try_from(mut row: $crate::table::Row<'a>) -> ::anyhow::Result<Self> {
                 $(
                 let $field = realm_model_field!(row, $field$(= $alias)?);
                 )*
@@ -65,17 +64,17 @@ mod tests {
                 true.into(),
                 "extra_field".into(),
             ];
-            let row = Row::new_with_names(
-                &values,
-                &[
-                    "id",
-                    "foo",
-                    "bar",
-                    "some_other_field",
-                    "baz",
-                    "qux",
-                    "!invalid_rust_alias",
-                    "another_field",
+            let row = Row::new(
+                values,
+                vec![
+                    "id".into(),
+                    "foo".into(),
+                    "bar".into(),
+                    "some_other_field".into(),
+                    "baz".into(),
+                    "qux".into(),
+                    "!invalid_rust_alias".into(),
+                    "another_field".into(),
                 ],
             );
 

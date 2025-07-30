@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 
-use crate::value::Value;
+use crate::value::{Backlink, Value};
 
 macro_rules! value_try_into {
     (Option<$target:ty>, $source:ident) => {
@@ -38,3 +38,4 @@ value_try_into!(Option<i64>, Int);
 value_try_into!(bool, Bool);
 value_try_into!(DateTime<Utc>, Timestamp);
 value_try_into!(Option<DateTime<Utc>>, Timestamp);
+value_try_into!(Backlink, BackLink);
