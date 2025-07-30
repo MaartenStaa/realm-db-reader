@@ -5,7 +5,7 @@ use crate::{
     value::{Backlink, Value},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Row<'a> {
     pub columns: HashMap<&'a str, usize>,
     values: &'a [Value],
@@ -18,6 +18,18 @@ impl<'a> Row<'a> {
                 .iter()
                 .enumerate()
                 .filter_map(|(index, spec)| spec.name().map(|name| (name, index)))
+                .collect(),
+            values: row,
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn new_with_names(row: &'a [Value], names: &'a [&'a str]) -> Self {
+        Self {
+            columns: names
+                .iter()
+                .enumerate()
+                .map(|(index, &name)| (name, index))
                 .collect(),
             values: row,
         }
