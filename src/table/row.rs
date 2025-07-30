@@ -46,4 +46,8 @@ impl<'a> Row<'a> {
     pub fn backlinks(&self) -> impl Iterator<Item = &Backlink> {
         self.backlinks.iter()
     }
+
+    pub fn has_field(&self, key: &str) -> bool {
+        self.values.contains_key(key)
+    }
 }

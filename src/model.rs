@@ -33,7 +33,7 @@ macro_rules! realm_model {
 #[cfg(test)]
 mod tests {
     use crate::table::Row;
-    use crate::value::Value;
+    use crate::value::{ARRAY_VALUE_KEY, Value};
     use itertools::*;
 
     #[test]
@@ -45,9 +45,10 @@ mod tests {
             baz: i64,
             qux: Option<i64>,
             other: bool,
+            items: Vec<String>,
         }
 
-        realm_model!(MyModel => id, foo, bar, baz, qux, other = "!invalid_rust_alias");
+        realm_model!(MyModel => id, foo, bar, baz, qux, other = "!invalid_rust_alias", items);
 
         let foo_values = [Some("hello".to_string()), None];
         let bar_values = [Some(chrono::Utc::now()), None];
@@ -63,6 +64,11 @@ mod tests {
                 qux_value.into(),
                 true.into(),
                 "extra_field".into(),
+                vec![
+                    Row::new(vec!["member1".into()], vec![ARRAY_VALUE_KEY.into()]),
+                    Row::new(vec!["member2".into()], vec![ARRAY_VALUE_KEY.into()]),
+                ]
+                .into(),
             ];
             let row = Row::new(
                 values,
@@ -75,6 +81,7 @@ mod tests {
                     "qux".into(),
                     "!invalid_rust_alias".into(),
                     "another_field".into(),
+                    "items".into(),
                 ],
             );
 
@@ -85,6 +92,10 @@ mod tests {
             assert_eq!(my_model.baz, 100);
             assert_eq!(my_model.qux, qux_value);
             assert!(my_model.other);
+            assert_eq!(
+                my_model.items,
+                vec!["member1".to_string(), "member2".to_string()]
+            );
         }
     }
 }

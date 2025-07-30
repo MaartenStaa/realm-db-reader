@@ -5,9 +5,11 @@ use crate::table::Row;
 mod from;
 mod into;
 
+pub const ARRAY_VALUE_KEY: &str = "!ARRAY_VALUE";
+
 /// Should match `crate::spec::ColumnType`
 #[allow(unused)]
-#[derive(Debug, Clone)] //, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum Value {
     Int(i64),
     Bool(bool),
