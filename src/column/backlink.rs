@@ -1,4 +1,4 @@
-use crate::array::{ArrayBasic, IntegerArray, RealmRef, RefOrTaggedValue};
+use crate::array::{Array, IntegerArray, RealmRef, RefOrTaggedValue};
 use crate::column::{ArrayLeaf, BpTree, Column, ColumnImpl, ColumnType};
 use crate::node::{Node, NodeWithContext};
 use crate::realm::Realm;
@@ -24,7 +24,7 @@ impl ColumnType for BacklinkColumnType {
 }
 
 struct BacklinkArrayLeaf {
-    root: ArrayBasic,
+    root: Array,
     context: BacklinkContext,
 }
 
@@ -38,7 +38,7 @@ impl NodeWithContext<BacklinkContext> for BacklinkArrayLeaf {
         Self: Sized,
     {
         Ok(Self {
-            root: ArrayBasic::from_ref(realm, ref_)?,
+            root: Array::from_ref(realm, ref_)?,
             context,
         })
     }

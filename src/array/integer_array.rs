@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 use std::sync::Arc;
 
-use crate::array::{ArrayBasic, RealmRef};
+use crate::array::{Array, RealmRef};
 use crate::node::Node;
 use crate::realm::Realm;
 
@@ -11,20 +11,20 @@ pub trait FromU64 {
 
 #[derive(Debug, Clone)]
 pub struct IntegerArray {
-    array: ArrayBasic,
+    array: Array,
 }
 
 impl Node for IntegerArray {
     // #[instrument(target = "IntegerArray", level = "debug")]
     fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
-        let array = ArrayBasic::from_ref(realm, ref_)?;
+        let array = Array::from_ref(realm, ref_)?;
 
         Ok(Self::from_array(array))
     }
 }
 
 impl IntegerArray {
-    pub fn from_array(array: ArrayBasic) -> Self {
+    pub fn from_array(array: Array) -> Self {
         Self { array }
     }
 

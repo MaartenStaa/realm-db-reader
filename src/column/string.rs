@@ -1,6 +1,5 @@
 use crate::array::{
-    ArrayBasic, ArrayString, ArrayStringShort, Expectation, LongBlobsArray, RealmRef,
-    SmallBlobsArray,
+    Array, ArrayString, ArrayStringShort, Expectation, LongBlobsArray, RealmRef, SmallBlobsArray,
 };
 use crate::column::Column;
 use crate::column::bptree::BpTreeNode;
@@ -12,7 +11,7 @@ use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct StringColumn {
-    root: ArrayBasic,
+    root: Array,
     attributes: ColumnAttributes,
     name: String,
 }
@@ -25,7 +24,7 @@ impl StringColumn {
         name: String,
     ) -> anyhow::Result<Self> {
         Ok(StringColumn {
-            root: unsafe { ArrayBasic::from_ref_bypass_bptree(realm, ref_)? },
+            root: unsafe { Array::from_ref_bypass_bptree(realm, ref_)? },
             attributes,
             name,
         })

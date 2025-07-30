@@ -1,17 +1,15 @@
-use crate::array::{ArrayBasic, IntegerArray, RealmRef, RefOrTaggedValue};
-use crate::column::bptree::BpTree;
+use crate::array::{Array, IntegerArray, RealmRef, RefOrTaggedValue};
 use crate::column::{ArrayLeaf, Column, ColumnImpl, ColumnType};
 use crate::node::{Node, NodeWithContext};
 use crate::realm::Realm;
 use crate::table::ColumnAttributes;
 use crate::utils::read_array_value;
-use crate::value::Value;
 use std::sync::Arc;
 
-struct LinkListColumnType;
+pub struct LinkListColumnType;
 
 #[derive(Debug, Copy, Clone)]
-struct LinkListColumnContext {
+pub struct LinkListColumnContext {
     target_table_index: usize,
 }
 
@@ -23,8 +21,8 @@ impl ColumnType for LinkListColumnType {
     const IS_NULLABLE: bool = false;
 }
 
-struct LinkListLeaf {
-    root: ArrayBasic,
+pub struct LinkListLeaf {
+    root: Array,
 }
 
 impl NodeWithContext<LinkListColumnContext> for LinkListLeaf {
@@ -36,7 +34,7 @@ impl NodeWithContext<LinkListColumnContext> for LinkListLeaf {
     where
         Self: Sized,
     {
-        let root = ArrayBasic::from_ref(realm, ref_)?;
+        let root = Array::from_ref(realm, ref_)?;
         Ok(Self { root })
     }
 }
@@ -45,7 +43,7 @@ impl ArrayLeaf<Vec<usize>, LinkListColumnContext> for LinkListLeaf {
     fn get(&self, index: usize) -> anyhow::Result<Vec<usize>> {
         let sub_array = match self.root.get_ref_or_tagged_value(index) {
             Some(RefOrTaggedValue::Ref(ref_)) => {
-                ArrayBasic::from_ref(Arc::clone(&self.root.node.realm), ref_)?
+                Array::from_ref(Arc::clone(&self.root.node.realm), ref_)?
             }
             _ => return Ok(vec![]),
         };
@@ -66,7 +64,7 @@ impl ArrayLeaf<Vec<usize>, LinkListColumnContext> for LinkListLeaf {
         let sub_array = match read_array_value(payload, header.width(), index) {
             0 => return Ok(vec![]),
             n => match RefOrTaggedValue::from_raw(n) {
-                RefOrTaggedValue::Ref(ref_) => ArrayBasic::from_ref(Arc::clone(&realm), ref_)?,
+                RefOrTaggedValue::Ref(ref_) => Array::from_ref(Arc::clone(&realm), ref_)?,
                 _ => return Ok(vec![]),
             },
         };
@@ -84,7 +82,7 @@ impl ArrayLeaf<Vec<usize>, LinkListColumnContext> for LinkListLeaf {
 }
 
 impl LinkListLeaf {
-    fn get_from_sub_array(sub_array: ArrayBasic) -> Vec<usize> {
+    fn get_from_sub_array(sub_array: Array) -> Vec<usize> {
         assert!(!sub_array.node.header.is_inner_bptree());
 
         IntegerArray::from_array(sub_array)

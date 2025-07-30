@@ -1,7 +1,7 @@
 use std::{fmt::Debug, marker::PhantomData, sync::Arc};
 
 use crate::{
-    array::{ArrayBasic, RealmRef},
+    array::{Array, RealmRef},
     column::{ArrayLeaf, ColumnType},
     node::{Node, NodeWithContext},
     realm::Realm,
@@ -9,7 +9,7 @@ use crate::{
 };
 
 pub struct BpTree<T: ColumnType> {
-    root: ArrayBasic,
+    root: Array,
     context: T::LeafContext,
     column_type: PhantomData<T>,
 }
@@ -29,7 +29,7 @@ impl<T: ColumnType> NodeWithContext<T::LeafContext> for BpTree<T> {
         ref_: RealmRef,
         context: T::LeafContext,
     ) -> anyhow::Result<Self> {
-        let root = ArrayBasic::from_ref(realm, ref_)?;
+        let root = Array::from_ref(realm, ref_)?;
 
         Ok(Self {
             root,
@@ -56,7 +56,7 @@ where
     T::LeafContext: sealed::EmptyContext,
 {
     fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
-        let root = ArrayBasic::from_ref(realm, ref_)?;
+        let root = Array::from_ref(realm, ref_)?;
 
         Ok(Self {
             root,
@@ -141,11 +141,11 @@ impl<T: ColumnType> BpTree<T> {
 /// A B+Tree node that holds a reference to the root node of the B+Tree.
 /// Root is not allowed to be a leaf node.
 pub(crate) struct BpTreeNode<'a> {
-    root: &'a ArrayBasic,
+    root: &'a Array,
 }
 
 impl<'a> BpTreeNode<'a> {
-    pub(crate) fn new(root: &'a ArrayBasic) -> Self {
+    pub(crate) fn new(root: &'a Array) -> Self {
         assert!(
             root.node.header.is_inner_bptree(),
             "Root must be a B+Tree node"

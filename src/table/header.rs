@@ -5,14 +5,11 @@ use anyhow::{anyhow, bail};
 use log::{info, warn};
 use tracing::instrument;
 
-use crate::array::{
-    ArrayBasic, ArrayString, ArrayStringShort, Expectation, FromU64, IntegerArray, RefOrTaggedValue,
-};
+use crate::array::{Array, ArrayStringShort, Expectation, FromU64, IntegerArray, RefOrTaggedValue};
 use crate::column::{
     Column, create_backlink_column, create_bool_column, create_int_column, create_linklist_column,
     create_string_column, create_subtable_column, create_timestamp_column,
 };
-use crate::node::Node;
 use crate::spec::ColumnType;
 use crate::table::column::ColumnAttributes;
 
@@ -24,12 +21,19 @@ pub struct TableHeader {
 impl TableHeader {
     #[instrument(target = "TableHeader", level = "debug")]
     fn from_parts(
-        data_array: &ArrayBasic,
+        data_array: &Array,
         column_types: Vec<ColumnType>,
         mut column_names: Vec<String>,
         column_attributes: Vec<ColumnAttributes>,
-        sub_spec_array: Option<ArrayBasic>,
+        sub_spec_array: Option<Array>,
     ) -> anyhow::Result<Self> {
+        // NOTE: The same does not apply for column names, as backlinks don't have a name.
+        assert_eq!(
+            column_types.len(),
+            column_attributes.len(),
+            "number of column types and column attributes should match"
+        );
+
         let mut columns = Vec::with_capacity(column_types.len());
         let mut data_array_index = 0;
         let mut sub_spec_index = 0;
@@ -93,22 +97,19 @@ impl TableHeader {
                     )?
                 }
                 ColumnType::Table => {
-                    let other_table_header_array = sub_spec_array
+                    let other_table_header_ref = sub_spec_array
                         .as_ref()
                         .ok_or(anyhow::anyhow!("Expected sub-spec array for table column"))?
-                        .get_node(sub_spec_index)?;
+                        .get_ref(sub_spec_index)
+                        .unwrap();
                     sub_spec_index += 1;
-                    let table_header = TableHeader::build(
-                        other_table_header_array,
-                        &ArrayBasic::from_ref(Arc::clone(&data_array.node.realm), data_ref)?,
-                    )?;
                     let name = column_names.pop().unwrap();
 
                     create_subtable_column(
                         Arc::clone(&data_array.node.realm),
+                        other_table_header_ref,
                         data_ref,
                         column_attributes[i],
-                        table_header,
                         name,
                     )?
                 }
@@ -150,37 +151,8 @@ impl TableHeader {
 
         Ok(Self { columns })
 
-        // // NOTE: The same does not apply for column names, as backlinks don't have a name.
-        // assert_eq!(
-        //     column_types.len(),
-        //     column_attributes.len(),
-        //     "number of column types and column attributes should match"
-        // );
-        //
-        // let mut columns = Vec::with_capacity(column_types.len());
-        // // Reverse the column names so we can do a low-cost pop for each column that has a name.
-        // column_names.reverse();
-        // let mut sub_spec_index = 0;
-        // let mut data_array_index = 0;
         // for (i, column_type) in column_types.into_iter().enumerate() {
         //     let spec = match column_type {
-        //         ColumnType::Table => {
-        //             let other_table_header_array = sub_spec_array
-        //                 .as_ref()
-        //                 .ok_or(anyhow::anyhow!("Expected sub-spec array for table column"))?
-        //                 .get_node(sub_spec_index)?;
-        //             sub_spec_index += 1;
-        //             let table_header = TableHeader::build(other_table_header_array)?;
-        //             let name = column_names
-        //                 .pop()
-        //                 .ok_or(anyhow!("Expected column name for column index {i}"))?;
-        //             ColumnSpec::Regular {
-        //                 type_: FatColumnType::Table(table_header),
-        //                 data_array_index,
-        //                 name,
-        //                 attributes: column_attributes[i],
-        //             }
-        //         }
         //         ct @ (ColumnType::Link | ColumnType::LinkList) => {
         //             let target_table = Self::get_sub_spec_index_value(
         //                 sub_spec_array
@@ -222,21 +194,11 @@ impl TableHeader {
         //         }
         //     };
         //
-        //     data_array_index += 1;
-        //     if column_attributes[i].is_indexed() {
-        //         // Indexed columns have an additional data array, so we need to increment the data
-        //         // index. In other words, for column with data index N, with attribute is_indexed,
-        //         // there's an index entry at N+1 in the data array.
-        //         data_array_index += 1;
-        //     }
-        //
         //     warn!(target: "Table", "column spec {i}: {spec:?}");
-        //     columns.push(spec);
-        // }
     }
 
     fn get_sub_spec_index_value(
-        sub_spec_array: &ArrayBasic,
+        sub_spec_array: &Array,
         sub_spec_index: usize,
     ) -> anyhow::Result<usize> {
         match sub_spec_array.get_ref_or_tagged_value(sub_spec_index) {
@@ -266,9 +228,9 @@ impl TableHeader {
 
 impl TableHeader {
     #[instrument(target = "TableHeader", level = "debug")]
-    pub(crate) fn build(header_array: ArrayBasic, data_array: &ArrayBasic) -> anyhow::Result<Self> {
+    pub(crate) fn build(header_array: Array, data_array: &Array) -> anyhow::Result<Self> {
         let column_types = {
-            let array: IntegerArray = header_array.get_node(0)?;
+            let array: IntegerArray = header_array.get_node(0)?.unwrap();
             array
                 .get_integers()
                 .into_iter()
@@ -279,14 +241,14 @@ impl TableHeader {
         info!(target: "TableHeader", "column_types: {:?}", column_types);
 
         let column_names = {
-            let array: ArrayStringShort<String> = header_array.get_node(1)?;
+            let array: ArrayStringShort<String> = header_array.get_node(1)?.unwrap();
             array.get_strings(Expectation::NotNullable)
         };
 
         info!(target: "TableHeader", "column_names: {:?}", column_names);
 
         let column_attributes = {
-            let array: IntegerArray = header_array.get_node(2)?;
+            let array: IntegerArray = header_array.get_node(2)?.unwrap();
             array
                 .get_integers()
                 .into_iter()
@@ -297,7 +259,7 @@ impl TableHeader {
         info!(target: "TableHeader", "column_attributes: {:?}", column_attributes);
 
         let sub_spec_array = if header_array.node.header.size > 3 {
-            Some(header_array.get_node(3)?)
+            header_array.get_node(3)?
         } else {
             None
         };

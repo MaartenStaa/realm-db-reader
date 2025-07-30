@@ -26,7 +26,7 @@ mod subtable;
 mod timestamp;
 
 /// A column for a table.
-pub trait Column: Debug {
+pub trait Column: Debug + Send {
     /// Get the value for this column for the row with the given index.
     fn get(&self, index: usize) -> anyhow::Result<Value>;
 
@@ -78,9 +78,10 @@ impl<T: ColumnType> Debug for ColumnImpl<T> {
     }
 }
 
-impl<T: ColumnType> Column for ColumnImpl<T>
+impl<T: ColumnType + Send> Column for ColumnImpl<T>
 where
     Value: From<T::Value>,
+    <T as ColumnType>::LeafContext: std::marker::Send,
 {
     fn get(&self, index: usize) -> anyhow::Result<Value> {
         Ok(Value::from(self.tree.get(index)?))

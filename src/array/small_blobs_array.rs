@@ -4,35 +4,31 @@ use std::sync::Arc;
 use log::warn;
 use tracing::instrument;
 
-use crate::array::{Array, ArrayBasic, Expectation, RealmRef};
+use crate::array::{Array, Expectation, IntegerArray, RealmRef};
 use crate::node::Node;
 use crate::realm::{Realm, RealmNode};
 
 #[derive(Debug, Clone)]
 pub struct SmallBlobsArray {
-    lengths: Array<u64>,
+    lengths: IntegerArray,
     blobs: RealmNode,
-    null: Option<Array<bool>>,
+    null: Option<IntegerArray>,
 }
 
 impl Node for SmallBlobsArray {
     fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
-        let array = ArrayBasic::from_ref(realm, ref_)?;
+        let array = Array::from_ref(realm, ref_)?;
 
         let size = array.node.header.size as usize;
         assert!(size >= 2, "SmallBlobsArray size must be at least 2");
         assert!(size <= 3, "SmallBlobsArray size must be at most 3");
 
-        let lengths_array: Array<u64> = array.get_node(0)?;
-        let blobs: RealmNode = array.get_node(1)?;
-        let null_array: Option<Array<bool>> = if size == 3 {
-            Some(array.get_node(2)?)
-        } else {
-            None
-        };
+        let lengths_array: IntegerArray = array.get_node(0)?.unwrap();
+        let blobs: RealmNode = array.get_node(1)?.unwrap();
+        let null_array: Option<IntegerArray> = if size == 3 { array.get_node(2)? } else { None };
 
         if let Some(nullable_array) = &null_array {
-            assert!(lengths_array.node.header.size == nullable_array.node.header.size);
+            assert!(lengths_array.element_count() == nullable_array.element_count());
         }
 
         Ok(Self {
@@ -45,7 +41,7 @@ impl Node for SmallBlobsArray {
 
 impl SmallBlobsArray {
     pub fn element_count(&self) -> usize {
-        self.lengths.node.header.size as usize
+        self.lengths.element_count()
     }
 
     #[instrument(target = "SmallBlobsArray", level = "debug")]

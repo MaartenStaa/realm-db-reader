@@ -4,19 +4,19 @@ use std::sync::Arc;
 use log::warn;
 use tracing::instrument;
 
-use crate::array::{ArrayBasic, Expectation, RealmRef};
+use crate::array::{Array, Expectation, RealmRef};
 use crate::node::Node;
 use crate::realm::{Realm, RealmNode};
 
 #[derive(Debug, Clone)]
 pub struct LongBlobsArray {
-    array: ArrayBasic,
+    array: Array,
 }
 
 impl Node for LongBlobsArray {
     #[instrument(target = "LongBlobsArray", level = "debug")]
     fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
-        let array = ArrayBasic::from_ref(realm, ref_)?;
+        let array = Array::from_ref(realm, ref_)?;
 
         assert!(
             array.node.header.has_refs(),

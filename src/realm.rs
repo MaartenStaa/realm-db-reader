@@ -6,7 +6,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use memmap2::Mmap;
 use tracing::instrument;
 
-use crate::array::{ArrayBasic, RealmRef};
+use crate::array::{Array, RealmRef};
 use crate::node::Node;
 use crate::utils::read_array_value;
 
@@ -227,9 +227,9 @@ impl Realm {
         self.hdr.current_top_ref()
     }
 
-    pub(crate) fn into_top_ref_array(self) -> anyhow::Result<ArrayBasic> {
+    pub fn into_top_ref_array(self) -> anyhow::Result<Array> {
         let ref_ = self.top_ref();
-        let array = ArrayBasic::from_ref(Arc::new(self), ref_)?;
+        let array = Array::from_ref(Arc::new(self), ref_)?;
 
         Ok(array)
     }

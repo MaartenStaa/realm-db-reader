@@ -1,4 +1,4 @@
-use crate::array::{ArrayBasic, RealmRef};
+use crate::array::{Array, RealmRef};
 use crate::column::integer::IntColumnType;
 use crate::column::integer_optional::IntNullableColumnType;
 use crate::column::{BpTree, Column};
@@ -24,9 +24,9 @@ impl TimestampColumn {
         attributes: ColumnAttributes,
         name: String,
     ) -> anyhow::Result<Self> {
-        let array = ArrayBasic::from_ref(Arc::clone(&realm), ref_)?;
-        let seconds = array.get_node(0)?;
-        let nanoseconds = array.get_node(1)?;
+        let array = Array::from_ref(Arc::clone(&realm), ref_)?;
+        let seconds = array.get_node(0)?.unwrap();
+        let nanoseconds = array.get_node(1)?.unwrap();
 
         Ok(Self {
             seconds,

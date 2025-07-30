@@ -1,33 +1,42 @@
 use anyhow::bail;
 
-use crate::array::{ArrayBasic, Expectation, LongBlobsArray, RealmRef, SmallBlobsArray};
+use crate::array::{Array, RealmRef};
 use crate::column::Column;
 use crate::node::Node;
 use crate::realm::Realm;
-use crate::table::{ColumnAttributes, TableHeader};
+use crate::table::ColumnAttributes;
 use crate::value::Value;
 use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct SubtableColumn {
-    root: ArrayBasic,
+    header_root: Array,
+    data_root: Array,
     attributes: ColumnAttributes,
-    header: TableHeader,
+    // header: TableHeader,
     name: String,
 }
 
 impl SubtableColumn {
     pub fn new(
         realm: Arc<Realm>,
-        ref_: RealmRef,
+        header_ref: RealmRef,
+        data_ref: RealmRef,
         attributes: ColumnAttributes,
-        header: TableHeader,
+        // header: TableHeader,
         name: String,
     ) -> anyhow::Result<Self> {
+        let header_root = Array::from_ref(Arc::clone(&realm), header_ref)?;
+        let data_root = Array::from_ref(realm, data_ref)?;
+
+        // B+Tree subtables not yet implemented
+        assert!(!data_root.node.header.is_inner_bptree());
+
         Ok(SubtableColumn {
-            root: unsafe { ArrayBasic::from_ref_bypass_bptree(realm, ref_)? },
+            header_root,
+            data_root,
             attributes,
-            header,
+            // header,
             name,
         })
     }
@@ -36,11 +45,16 @@ impl SubtableColumn {
 impl Column for SubtableColumn {
     /// Get the value for this column for the row with the given index.
     fn get(&self, index: usize) -> anyhow::Result<Value> {
-        bail!("todo: SubtableColumn::get not implemented");
+        let Some(array): Option<Array> = self.data_root.get_node(index)? else {
+            return Ok(Value::None);
+        };
+
+        dbg!(&array);
+        todo!();
     }
 
     fn is_null(&self, index: usize) -> anyhow::Result<bool> {
-        todo!();
+        Ok(self.data_root.get_ref(index).is_none())
     }
 
     /// Get the total number of values in this column.
@@ -64,43 +78,20 @@ impl Column for SubtableColumn {
 
 impl SubtableColumn {
     fn root_is_leaf(&self) -> bool {
-        !self.root.node.header.is_inner_bptree()
-    }
-
-    fn get_from_small_blob(&self, ref_: RealmRef, index: usize) -> anyhow::Result<Option<Vec<u8>>> {
-        Ok(
-            SmallBlobsArray::from_ref(Arc::clone(&self.root.node.realm), ref_)?.get(
-                index,
-                if self.nullable() {
-                    Expectation::Nullable
-                } else {
-                    Expectation::NotNullable
-                },
-            ),
-        )
-    }
-
-    fn get_from_long_blobs(&self, ref_: RealmRef, index: usize) -> anyhow::Result<Option<Vec<u8>>> {
-        LongBlobsArray::from_ref(Arc::clone(&self.root.node.realm), ref_)?.get(
-            index,
-            if self.nullable() {
-                Expectation::Nullable
-            } else {
-                Expectation::NotNullable
-            },
-        )
+        !self.data_root.node.header.is_inner_bptree()
     }
 }
 
 // Factory function for subtable columns
 pub fn create_subtable_column(
     realm: Arc<Realm>,
-    ref_: RealmRef,
+    header_ref: RealmRef,
+    data_ref: RealmRef,
     attributes: ColumnAttributes,
-    header: TableHeader,
+    // header: TableHeader,
     name: String,
 ) -> anyhow::Result<Box<SubtableColumn>> {
     Ok(Box::new(SubtableColumn::new(
-        realm, ref_, attributes, header, name,
+        realm, header_ref, data_ref, attributes, name,
     )?))
 }

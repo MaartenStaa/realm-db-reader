@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use tracing::instrument;
 
-use crate::array::{ArrayBasic, RealmRef, RefOrTaggedValue};
+use crate::array::{Array, RealmRef, RefOrTaggedValue};
 use crate::node::Node;
 use crate::realm::Realm;
 use crate::utils;
@@ -11,16 +11,16 @@ use crate::value::Value;
 
 #[derive(Debug, Clone)]
 pub struct Index {
-    array: ArrayBasic,
-    offsets: ArrayBasic,
+    array: Array,
+    offsets: Array,
 }
 
 impl Node for Index {
     fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
-        let array = unsafe { ArrayBasic::from_ref_bypass_bptree(Arc::clone(&realm), ref_)? };
+        let array = unsafe { Array::from_ref_bypass_bptree(Arc::clone(&realm), ref_)? };
         assert!(array.node.header.size >= 1);
 
-        let keys = array.get_node(0)?;
+        let keys = array.get_node(0)?.unwrap();
 
         Ok(Self {
             array,
@@ -97,10 +97,7 @@ impl Index {
                 }
                 RefOrTaggedValue::Ref(ref_) => {
                     let array = unsafe {
-                        ArrayBasic::from_ref_bypass_bptree(
-                            Arc::clone(&self.array.node.realm),
-                            ref_,
-                        )?
+                        Array::from_ref_bypass_bptree(Arc::clone(&self.array.node.realm), ref_)?
                     };
                     let is_sub_index = array.node.header.context_flag();
 

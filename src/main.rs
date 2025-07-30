@@ -1,27 +1,14 @@
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::path::PathBuf;
 
-use chrono::DateTime;
 use clap::{Parser, Subcommand};
 use log::warn;
 
-use crate::build::Build;
-use crate::group::Group;
-use crate::realm::Realm;
-use crate::value::Value;
-
-mod array;
-mod build;
-mod column;
-mod debug;
-mod group;
-mod index;
-mod node;
-mod realm;
-mod spec;
-mod table;
-mod utils;
-mod value;
+use realm_rust::group::Group;
+use realm_rust::realm::Realm;
+use realm_rust::table::Row;
+use realm_rust::value::{Backlink, Value};
 
 #[derive(Parser)]
 struct Cli {

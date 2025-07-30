@@ -1,7 +1,6 @@
 mod column;
 mod header;
 mod row;
-mod spec;
 
 use std::collections::HashMap;
 
@@ -9,7 +8,7 @@ use anyhow::{Ok, anyhow, bail};
 use log::debug;
 use tracing::instrument;
 
-use crate::array::ArrayBasic;
+use crate::array::Array;
 use crate::column::Column;
 use crate::index::Index;
 pub use crate::table::column::ColumnAttributes;
@@ -21,7 +20,7 @@ use crate::value::Value;
 #[allow(unused)]
 pub struct Table {
     pub index: usize,
-    data_array: ArrayBasic,
+    data_array: Array,
     header: TableHeader,
     data_columns: Vec<Vec<Option<Value>>>,
     data_rows: Vec<Option<Vec<Value>>>,
@@ -30,10 +29,10 @@ pub struct Table {
 
 impl Table {
     #[instrument(target = "Table", level = "debug")]
-    pub fn build(array: ArrayBasic, index: usize) -> anyhow::Result<Self> {
-        let data_array = array.get_node(1)?;
+    pub fn build(array: Array, index: usize) -> anyhow::Result<Self> {
+        let data_array = array.get_node(1)?.unwrap();
         let header = {
-            let array: ArrayBasic = array.get_node(0)?;
+            let array: Array = array.get_node(0)?.unwrap();
             TableHeader::build(array, &data_array)?
         };
 
@@ -162,15 +161,18 @@ impl Table {
 
         self.ensure_columns_loaded(index)?;
 
-        let mut row = Vec::with_capacity(self.header.column_count());
-        for i in 0..self.header.column_count() {
-            let column_data = &self.data_columns[i][index];
-            // TODO: Avoid this clone?
-            row.push(column_data.clone().unwrap());
-        }
-
-        self.data_rows.resize(index + 1, None);
-        self.data_rows[index] = Some(row);
+        // let mut row = Vec::with_capacity(self.header.column_count());
+        // for i in 0..self.header.column_count() {
+        //     let column_data = &self.data_columns[i][index];
+        //     // TODO: Avoid this clone?
+        //     row.push(column_data.clone().unwrap());
+        // }
+        //
+        // // Manual resize without Clone
+        // // self.data_rows.resize(index + 1, None);
+        // let rows_to_add = index + 1 - self.data_rows.len();
+        // self.data_rows.extend((0..rows_to_add).map(|_| None));
+        // self.data_rows[index] = Some(row);
 
         Ok(())
     }

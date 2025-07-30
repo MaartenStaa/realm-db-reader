@@ -1,0 +1,63 @@
+use chrono::{DateTime, Utc};
+
+use crate::{
+    array::RealmRef,
+    table::{Row, Table},
+};
+
+mod from;
+mod into;
+
+/// Should match `crate::spec::ColumnType`
+#[allow(unused)]
+#[derive(Debug, Clone)] //, Hash, Eq, PartialEq)]
+pub enum Value {
+    Int(i64),
+    Bool(bool),
+    String(String),
+    OldStringEnum(String),
+    Binary(Vec<u8>),
+    Table(Vec<Row<'static>>),
+    // Table(RealmRef),
+    OldMixed,
+    OldDateTime,
+    Timestamp(DateTime<Utc>),
+    // Float(f32),
+    // Double(f64),
+    Float,
+    Double,
+    Reserved4,
+    Link,
+    LinkList(Vec<usize>),
+    BackLink(Backlink),
+
+    // Nullable
+    None,
+}
+
+impl Value {
+    pub fn is_none(&self) -> bool {
+        matches!(self, Value::None)
+    }
+}
+
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+pub struct Backlink {
+    pub origin_table_index: usize,
+    pub origin_column_index: usize,
+    pub row_indexes: Vec<usize>,
+}
+
+impl Backlink {
+    pub fn new(
+        origin_table_index: usize,
+        origin_column_index: usize,
+        row_indexes: Vec<usize>,
+    ) -> Self {
+        Self {
+            origin_table_index,
+            origin_column_index,
+            row_indexes,
+        }
+    }
+}
