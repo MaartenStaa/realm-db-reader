@@ -3,7 +3,10 @@ use std::fmt::Debug;
 use anyhow::anyhow;
 use chrono::{DateTime, Utc};
 
-use crate::value::{ARRAY_VALUE_KEY, Backlink, Value};
+use crate::{
+    table::Row,
+    value::{ARRAY_VALUE_KEY, Backlink, Value},
+};
 
 macro_rules! value_try_into {
     (Option<$target:ty>, $source:ident) => {
@@ -37,6 +40,20 @@ macro_rules! value_try_into {
                 }
             }
         }
+
+        impl<'a> TryFrom<Row<'a>> for $target {
+            type Error = anyhow::Error;
+
+            fn try_from(mut value: Row<'a>) -> Result<Self, Self::Error> {
+                let Some(value) = value.take(ARRAY_VALUE_KEY) else {
+                    return Err(anyhow!(
+                        "Expected a row with field `{ARRAY_VALUE_KEY}`, found {value:?}",
+                    ));
+                };
+
+                value.try_into()
+            }
+        }
     };
 }
 
@@ -49,9 +66,9 @@ value_try_into!(DateTime<Utc>, Timestamp);
 value_try_into!(Option<DateTime<Utc>>, Timestamp);
 value_try_into!(Backlink, BackLink);
 
-impl<T> TryFrom<Value> for Vec<T>
+impl<'a, T> TryFrom<Value> for Vec<T>
 where
-    T: TryFrom<Value>,
+    T: TryFrom<Row<'a>>,
     T::Error: Debug,
 {
     type Error = anyhow::Error;
@@ -59,30 +76,11 @@ where
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::Table(rows) => {
-                // Bingo!
                 let mut result = Vec::with_capacity(rows.len());
-                if !rows
-                    .first()
-                    .map(|row| row.has_field(ARRAY_VALUE_KEY))
-                    .unwrap_or(true)
-                {
-                    return Err(anyhow!(
-                        "Expected a Table with field `{ARRAY_VALUE_KEY}`, found {:?}",
-                        rows.first()
-                    ));
-                }
-
-                for mut row in rows {
-                    result.push(
-                        row.take(ARRAY_VALUE_KEY)
-                            .expect("Expected to find ARRAY_VALUE_KEY in row")
-                            .try_into()
-                            .map_err(|e| {
-                                anyhow!(
-                                    "Failed to convert value in row to Vec<T>: {e:?} for row: {row:?}",
-                                )
-                            })?,
-                    );
+                for row in rows {
+                    result.push(row.try_into().map_err(|e| {
+                        anyhow!("Failed to convert value in row to Vec<T>: {e:?}",)
+                    })?);
                 }
 
                 Ok(result)

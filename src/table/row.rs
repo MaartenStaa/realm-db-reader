@@ -43,6 +43,10 @@ impl<'a> Row<'a> {
         self.values.remove(column_name)
     }
 
+    pub fn take_backlinks(&mut self) -> Vec<Backlink> {
+        std::mem::take(&mut self.backlinks)
+    }
+
     pub fn backlinks(&self) -> impl Iterator<Item = &Backlink> {
         self.backlinks.iter()
     }
