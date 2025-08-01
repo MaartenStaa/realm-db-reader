@@ -79,7 +79,7 @@ pub enum Expectation {
 
 #[derive(Debug, Clone)]
 pub struct Array {
-    pub node: RealmNode,
+    pub(crate) node: RealmNode,
     width: u8,
 }
 

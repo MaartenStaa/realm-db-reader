@@ -85,7 +85,7 @@ fn find_bptree_child(
     let (child_index, index_in_child) =
         find_child_from_offsets(realm.clone(), offsets_ref, offsets_width, index)?;
 
-    return Ok((child_index, index_in_child));
+    Ok((child_index, index_in_child))
 }
 
 pub fn find_bptree_child_in_payload(
@@ -245,5 +245,5 @@ fn upper_bound(data: &[u8], width: u8, mut size: usize, value: u64) -> usize {
         low = if value >= v { other_low } else { low };
     }
 
-    return low;
+    low
 }

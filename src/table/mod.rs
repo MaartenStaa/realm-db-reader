@@ -17,23 +17,29 @@ use crate::value::Value;
 #[allow(unused)]
 pub struct Table {
     header: TableHeader,
+    table_number: usize,
 }
 
 impl Table {
     #[instrument(target = "Table", level = "debug")]
-    pub fn build(array: Array) -> anyhow::Result<Self> {
+    pub fn build(array: Array, table_number: usize) -> anyhow::Result<Self> {
         let header_array = array.get_node(0)?.unwrap();
         let data_array = array.get_node(1)?.unwrap();
 
-        Self::build_from(&header_array, data_array)
+        Self::build_from(&header_array, data_array, table_number)
     }
 
     #[instrument(target = "Table", level = "debug")]
-    pub(crate) fn build_from(header_array: &Array, data_array: Array) -> anyhow::Result<Self> {
+    pub(crate) fn build_from(
+        header_array: &Array,
+        data_array: Array,
+        table_number: usize,
+    ) -> anyhow::Result<Self> {
         let header = TableHeader::build(header_array, &data_array)?;
 
         let result = Self {
             header,
+            table_number,
         };
 
         debug!(target: "Table", "data: {:?}", result);
@@ -42,8 +48,12 @@ impl Table {
 }
 
 impl Table {
-    pub fn get_column_spec(&self, column_index: usize) -> anyhow::Result<&dyn Column> {
-        self.header.get_column(column_index)
+    pub fn get_table_number(&self) -> usize {
+        self.table_number
+    }
+
+    pub fn get_column_spec(&self, column_number: usize) -> anyhow::Result<&dyn Column> {
+        self.header.get_column(column_number)
     }
 
     #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
@@ -53,8 +63,8 @@ impl Table {
     }
 
     #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
-    pub fn get_row<'a>(&'a self, row_index: usize) -> anyhow::Result<Row<'a>> {
-        let values = self.load_row(row_index)?;
+    pub fn get_row<'a>(&'a self, row_number: usize) -> anyhow::Result<Row<'a>> {
+        let values = self.load_row(row_number)?;
 
         Ok(Row::new(
             values,
