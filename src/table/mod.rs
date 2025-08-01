@@ -129,26 +129,14 @@ impl Table {
         Ok(rows)
     }
 
-    #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
-    pub fn get_rows_owned(&self) -> anyhow::Result<Vec<Row<'static>>> {
-        let row_count = self.row_count()?;
-        let mut rows = Vec::with_capacity(row_count);
-
-        for i in 0..row_count {
-            rows.push(self.get_row_owned(i)?);
-        }
-
-        Ok(rows)
-    }
-
     #[instrument(target = "Table", level = "debug", skip(self))]
-    fn load_column(&self, column_index: usize, row_index: usize) -> anyhow::Result<Value> {
-        let column_spec = self.header.get_column(column_index)?;
-        let value = column_spec.get(row_index)?;
+    fn load_column(&self, column_number: usize, row_number: usize) -> anyhow::Result<Value> {
+        let column_spec = self.header.get_column(column_number)?;
+        let value = column_spec.get(row_number)?;
 
         debug!(
             target: "Table",
-            "Loaded column {column_index} at row {row_index}: {:?}",
+            "Loaded column {column_number} at row {row_number}: {:?}",
             value
         );
 
@@ -162,7 +150,7 @@ impl Table {
     //     table_header: &TableHeader,
     //     name: &str,
     //     attributes: &ColumnAttributes,
-    //     row_index: usize,
+    //     row_number: usize,
     // ) -> anyhow::Result<Value> {
     //     // let array: Array = match self.data_array.get_ref(data_array_index) {
     //     //     Some(ref_) => Array::from_ref(self.data_array.node.realm.clone(), ref_)?,
@@ -185,10 +173,10 @@ impl Table {
     // fn read_column_row_link(
     //     &self,
     //     data_array_index: usize,
-    //     target_table_index: usize,
+    //     target_table_number: usize,
     //     name: &str,
     //     attributes: &ColumnAttributes,
-    //     row_index: usize,
+    //     row_number: usize,
     // ) -> anyhow::Result<Value> {
     //     unimplemented!("link column {name} at index {data_array_index}");
     // }

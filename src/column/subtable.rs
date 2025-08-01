@@ -71,7 +71,11 @@ impl ArrayLeaf<Option<Vec<Row<'static>>>, SubtableContext> for SubtableArrayLeaf
         };
 
         Ok(Some(
-            Table::build_from(&self.header_array, data_array)?.get_rows_owned()?,
+            Table::build_from(&self.header_array, data_array, usize::MAX)?
+                .get_rows()?
+                .into_iter()
+                .map(Row::into_owned)
+                .collect(),
         ))
     }
 
@@ -94,7 +98,11 @@ impl ArrayLeaf<Option<Vec<Row<'static>>>, SubtableContext> for SubtableArrayLeaf
         let header_array = Array::from_ref(realm, context.header_ref)?;
 
         Ok(Some(
-            Table::build_from(&header_array, data_array)?.get_rows_owned()?,
+            Table::build_from(&header_array, data_array, usize::MAX)?
+                .get_rows()?
+                .into_iter()
+                .map(|row| Row::into_owned(row))
+                .collect(),
         ))
     }
 

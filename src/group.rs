@@ -8,7 +8,6 @@ use crate::table::Table;
 pub struct Group {
     tables_array: Array,
     table_names: Vec<String>,
-    tables: Vec<Option<Table>>,
 }
 
 impl Group {
@@ -19,49 +18,34 @@ impl Group {
             array.get_strings(Expectation::NotNullable)
         };
 
-        let tables = table_names.iter().map(|_| None).collect();
         let tables_array = array.get_node(1)?.unwrap();
 
         Ok(Self {
-            // group_array: array,
             tables_array,
             table_names,
-            tables,
         })
     }
 }
 
 impl Group {
     #[instrument(target = "Group", level = "debug", skip(self), fields(table_names = ?self.table_names))]
-    pub fn get_table(&mut self, index: usize) -> anyhow::Result<&Table> {
-        Ok(&*self.get_or_load_table(index)?)
+    pub fn get_table(&self, table_number: usize) -> anyhow::Result<Table> {
+        let table_array = self.tables_array.get_node(table_number)?.unwrap();
+
+        let table = Table::build(table_array, table_number)?;
+
+        Ok(table)
     }
 
     #[instrument(target = "Group", level = "debug", skip(self), fields(table_names = ?self.table_names))]
-    pub fn get_table_by_name(&mut self, name: &str) -> anyhow::Result<&Table> {
-        let index = self
+    pub fn get_table_by_name(&self, name: &str) -> anyhow::Result<Table> {
+        let table_number = self
             .table_names
             .iter()
             .position(|n| n == name)
             .ok_or(anyhow::anyhow!("No table with name {name}"))?;
 
-        Ok(&*self.get_or_load_table(index)?)
-    }
-
-    #[instrument(target = "Group", level = "debug", skip(self), fields(table_names = ?self.table_names))]
-    pub fn get_table_mut(&mut self, index: usize) -> anyhow::Result<&mut Table> {
-        self.get_or_load_table(index)
-    }
-
-    #[instrument(target = "Group", level = "debug", skip(self), fields(table_names = ?self.table_names))]
-    pub fn get_table_by_name_mut(&mut self, name: &str) -> anyhow::Result<&mut Table> {
-        let index = self
-            .table_names
-            .iter()
-            .position(|n| n == name)
-            .ok_or(anyhow::anyhow!("No table with name {name}"))?;
-
-        self.get_or_load_table(index)
+        self.get_table(table_number)
     }
 
     pub fn table_count(&self) -> usize {
@@ -74,19 +58,5 @@ impl Group {
 
     pub fn get_table_names(&self) -> &[String] {
         &self.table_names
-    }
-
-    #[instrument(target = "Group", level = "debug", skip(self), fields(table_names = ?self.table_names))]
-    fn get_or_load_table(&mut self, index: usize) -> anyhow::Result<&mut Table> {
-        if self.tables[index].is_some() {
-            return Ok(self.tables[index].as_mut().unwrap());
-        }
-
-        let table_array = self.tables_array.get_node(index)?.unwrap();
-
-        let table = Table::build(table_array)?;
-        self.tables[index] = Some(table);
-
-        Ok(self.tables[index].as_mut().unwrap())
     }
 }

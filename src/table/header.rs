@@ -7,8 +7,9 @@ use tracing::instrument;
 
 use crate::array::{Array, ArrayStringShort, Expectation, FromU64, IntegerArray, RefOrTaggedValue};
 use crate::column::{
-    Column, create_backlink_column, create_bool_column, create_int_column, create_linklist_column,
-    create_string_column, create_subtable_column, create_timestamp_column,
+    Column, create_backlink_column, create_bool_column, create_bool_null_column, create_int_column,
+    create_int_null_column, create_linklist_column, create_string_column, create_subtable_column,
+    create_timestamp_column,
 };
 use crate::spec::ColumnType;
 use crate::table::column::ColumnAttributes;

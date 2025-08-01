@@ -51,3 +51,18 @@ impl<'a> Row<'a> {
         self.values.contains_key(key)
     }
 }
+
+impl Row<'_> {
+    pub fn into_owned(self) -> Row<'static> {
+        let values = self
+            .values
+            .into_iter()
+            .map(|(k, v)| (k.into_owned().into(), v))
+            .collect();
+
+        Row {
+            values,
+            backlinks: self.backlinks,
+        }
+    }
+}
