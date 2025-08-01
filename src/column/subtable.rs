@@ -118,6 +118,8 @@ pub fn create_subtable_column(
     Ok(Box::new(SubtableColumn::new(
         realm,
         data_ref,
+        // Subtables cannot be indexed.
+        None,
         attributes,
         Some(name),
         SubtableContext { header_ref },

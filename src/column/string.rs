@@ -3,6 +3,7 @@ use crate::array::{
 };
 use crate::column::Column;
 use crate::column::bptree::BpTreeNode;
+use crate::index::Index;
 use crate::node::Node;
 use crate::realm::{Realm, RealmNode};
 use crate::table::ColumnAttributes;
@@ -12,6 +13,7 @@ use std::sync::Arc;
 #[derive(Debug, Clone)]
 pub struct StringColumn {
     root: Array,
+    index: Option<Index>,
     attributes: ColumnAttributes,
     name: String,
 }
@@ -19,12 +21,19 @@ pub struct StringColumn {
 impl StringColumn {
     pub fn new(
         realm: Arc<Realm>,
-        ref_: RealmRef,
+        data_ref: RealmRef,
+        index_ref: Option<RealmRef>,
         attributes: ColumnAttributes,
         name: String,
     ) -> anyhow::Result<Self> {
+        let root = Array::from_ref(Arc::clone(&realm), data_ref)?;
+        let index = index_ref
+            .map(|ref_| Index::from_ref(realm, ref_))
+            .transpose()?;
+
         Ok(StringColumn {
-            root: Array::from_ref(realm, ref_)?,
+            root,
+            index,
             attributes,
             name,
         })
@@ -136,6 +145,14 @@ impl Column for StringColumn {
         self.attributes.is_indexed()
     }
 
+    fn get_row_number_by_index(&self, lookup_value: &Value) -> anyhow::Result<Option<usize>> {
+        let Some(index) = &self.index else {
+            panic!("Column {:?} is not indexed", self.name());
+        };
+
+        index.find_first(lookup_value)
+    }
+
     fn name(&self) -> Option<&str> {
         Some(&self.name)
     }
@@ -174,9 +191,12 @@ impl StringColumn {
 // Factory function for string columns
 pub fn create_string_column(
     realm: Arc<Realm>,
-    ref_: RealmRef,
+    data_ref: RealmRef,
+    index_ref: Option<RealmRef>,
     attributes: ColumnAttributes,
     name: String,
-) -> anyhow::Result<Box<StringColumn>> {
-    Ok(Box::new(StringColumn::new(realm, ref_, attributes, name)?))
+) -> anyhow::Result<Box<dyn Column>> {
+    Ok(Box::new(StringColumn::new(
+        realm, data_ref, index_ref, attributes, name,
+    )?))
 }

@@ -127,6 +127,8 @@ pub fn create_backlink_column(
     Ok(Box::new(BacklinkColumn::new(
         realm,
         ref_,
+        // Backlink columns cannot be indexed.
+        None,
         attributes,
         None,
         BacklinkContext {

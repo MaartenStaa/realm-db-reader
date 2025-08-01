@@ -105,8 +105,9 @@ pub fn create_linklist_column(
     Ok(Box::new(LinkListColumn::new(
         realm,
         ref_,
+        // Link list columns cannot be indexed
+        None,
         attributes,
-        // target_table_index,
         Some(name),
         LinkListColumnContext { target_table_index },
     )?))

@@ -7,22 +7,22 @@ use crate::utils::read_array_value;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
-pub struct IntNullableColumnType;
+pub struct BoolNullableColumnType;
 
-impl ColumnType for IntNullableColumnType {
-    type Value = Option<i64>;
-    type LeafType = OptionalIntegerArrayLeaf;
+impl ColumnType for BoolNullableColumnType {
+    type Value = Option<bool>;
+    type LeafType = OptionalBoolArrayLeaf;
     type LeafContext = ();
 
     const IS_NULLABLE: bool = false;
 }
 
 #[derive(Debug)]
-pub struct OptionalIntegerArrayLeaf {
+pub struct OptionalBoolArrayLeaf {
     array: IntegerArray,
 }
 
-impl NodeWithContext<()> for OptionalIntegerArrayLeaf {
+impl NodeWithContext<()> for OptionalBoolArrayLeaf {
     fn from_ref_with_context(realm: Arc<Realm>, ref_: RealmRef, _: ()) -> anyhow::Result<Self>
     where
         Self: Sized,
@@ -32,14 +32,14 @@ impl NodeWithContext<()> for OptionalIntegerArrayLeaf {
     }
 }
 
-impl ArrayLeaf<Option<i64>, ()> for OptionalIntegerArrayLeaf {
-    fn get(&self, index: usize) -> anyhow::Result<Option<i64>> {
+impl ArrayLeaf<Option<bool>, ()> for OptionalBoolArrayLeaf {
+    fn get(&self, index: usize) -> anyhow::Result<Option<bool>> {
         let value = self.array.get(index + 1);
         if value == self.null_value() {
             return Ok(None);
         }
 
-        Ok(Some(i64::from_le_bytes(value.to_le_bytes())))
+        Ok(Some(value == 1))
     }
 
     fn is_null(&self, index: usize) -> bool {
@@ -56,7 +56,7 @@ impl ArrayLeaf<Option<i64>, ()> for OptionalIntegerArrayLeaf {
         ref_: RealmRef,
         index: usize,
         _: (),
-    ) -> anyhow::Result<Option<i64>> {
+    ) -> anyhow::Result<Option<bool>> {
         let header = realm.header(ref_)?;
         let width = header.width();
 
@@ -66,26 +66,26 @@ impl ArrayLeaf<Option<i64>, ()> for OptionalIntegerArrayLeaf {
         Ok(if value == null_value {
             None
         } else {
-            Some(i64::from_le_bytes(value.to_le_bytes()))
+            Some(value == 1)
         })
     }
 }
 
-impl OptionalIntegerArrayLeaf {
+impl OptionalBoolArrayLeaf {
     fn null_value(&self) -> u64 {
         self.array.get(0)
     }
 }
 
-// Factory function for integer columns
-pub fn create_int_null_column(
+// Factory function for nullable bool columns
+pub fn create_bool_null_column(
     realm: Arc<Realm>,
     data_ref: RealmRef,
     index_ref: Option<RealmRef>,
     attributes: ColumnAttributes,
     name: String,
 ) -> anyhow::Result<Box<dyn Column>> {
-    Ok(Box::new(IntNullColumn::new(
+    Ok(Box::new(BoolNullColumn::new(
         realm,
         data_ref,
         index_ref,
@@ -96,4 +96,4 @@ pub fn create_int_null_column(
 }
 
 // Type alias for convenience
-pub type IntNullColumn = ColumnImpl<IntNullableColumnType>;
+pub type BoolNullColumn = ColumnImpl<BoolNullableColumnType>;

@@ -59,13 +59,15 @@ impl ArrayLeaf<bool, ()> for BoolArrayLeaf {
 // Factory function for boolean columns
 pub fn create_bool_column(
     realm: Arc<Realm>,
-    ref_: RealmRef,
+    data_ref: RealmRef,
+    index_ref: Option<RealmRef>,
     attributes: ColumnAttributes,
     name: String,
 ) -> anyhow::Result<Box<dyn Column>> {
     Ok(Box::new(BoolColumn::new(
         realm,
-        ref_,
+        data_ref,
+        index_ref,
         attributes,
         Some(name),
         (),

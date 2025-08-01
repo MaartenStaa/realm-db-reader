@@ -62,13 +62,15 @@ impl ArrayLeaf<i64, ()> for IntegerArrayLeaf {
 // Factory function for integer columns
 pub fn create_int_column(
     realm: Arc<Realm>,
-    ref_: RealmRef,
+    data_ref: RealmRef,
+    index_ref: Option<RealmRef>,
     attributes: ColumnAttributes,
     name: String,
 ) -> anyhow::Result<Box<dyn Column>> {
     Ok(Box::new(IntColumn::new(
         realm,
-        ref_,
+        data_ref,
+        index_ref,
         attributes,
         Some(name),
         (),

@@ -42,41 +42,74 @@ impl TableHeader {
         column_names.reverse();
 
         for (i, column_type) in column_types.into_iter().enumerate() {
+            let attributes = column_attributes[i];
             let data_ref = data_array
                 .get_ref(data_array_index)
                 .ok_or_else(|| anyhow!("failed to find data entry for column {i}"))?;
 
             log::debug!(target: "TableHeader", "column type {i}: {column_type:?} has data array index {data_array_index} with ref {data_ref:?}");
 
+            let index_ref = if attributes.is_indexed() {
+                Some(
+                    data_array
+                        .get_ref(data_array_index + 1)
+                        .ok_or_else(|| anyhow!("failed to find index entry for column {i}"))?,
+                )
+            } else {
+                None
+            };
+
             let column = match column_type {
                 ColumnType::Int => {
-                    if column_attributes[i].is_nullable() {
-                        todo!("nullable int column")
+                    if attributes.is_nullable() {
+                        create_int_null_column(
+                            Arc::clone(&data_array.node.realm),
+                            data_ref,
+                            index_ref,
+                            attributes,
+                            column_names.pop().unwrap(),
+                        )?
                     } else {
                         create_int_column(
                             Arc::clone(&data_array.node.realm),
                             data_ref,
-                            column_attributes[i],
+                            index_ref,
+                            attributes,
                             column_names.pop().unwrap(),
                         )?
                     }
                 }
-                ColumnType::Bool => create_bool_column(
-                    Arc::clone(&data_array.node.realm),
-                    data_ref,
-                    column_attributes[i],
-                    column_names.pop().unwrap(),
-                )?,
+                ColumnType::Bool => {
+                    if attributes.is_nullable() {
+                        create_bool_null_column(
+                            Arc::clone(&data_array.node.realm),
+                            data_ref,
+                            index_ref,
+                            attributes,
+                            column_names.pop().unwrap(),
+                        )?
+                    } else {
+                        create_bool_column(
+                            Arc::clone(&data_array.node.realm),
+                            data_ref,
+                            index_ref,
+                            attributes,
+                            column_names.pop().unwrap(),
+                        )?
+                    }
+                }
                 ColumnType::String => create_string_column(
                     Arc::clone(&data_array.node.realm),
                     data_ref,
-                    column_attributes[i],
+                    index_ref,
+                    attributes,
                     column_names.pop().unwrap(),
                 )?,
                 ColumnType::Timestamp => create_timestamp_column(
                     Arc::clone(&data_array.node.realm),
                     data_ref,
-                    column_attributes[i],
+                    index_ref,
+                    attributes,
                     column_names.pop().unwrap(),
                 )?,
                 ColumnType::LinkList => {
@@ -91,7 +124,7 @@ impl TableHeader {
                     create_linklist_column(
                         Arc::clone(&data_array.node.realm),
                         data_ref,
-                        column_attributes[i],
+                        attributes,
                         target_table_index,
                         column_names.pop().unwrap(),
                     )?
@@ -109,7 +142,7 @@ impl TableHeader {
                         Arc::clone(&data_array.node.realm),
                         other_table_header_ref,
                         data_ref,
-                        column_attributes[i],
+                        attributes,
                         name,
                     )?
                 }
@@ -126,7 +159,7 @@ impl TableHeader {
                     create_backlink_column(
                         Arc::clone(&data_array.node.realm),
                         data_ref,
-                        column_attributes[i],
+                        attributes,
                         target_table_index,
                         target_table_column_index,
                     )?
@@ -141,7 +174,7 @@ impl TableHeader {
             columns.push(column);
 
             data_array_index += 1;
-            if column_attributes[i].is_indexed() {
+            if attributes.is_indexed() {
                 // Indexed columns have an additional data array, so we need to increment the data
                 // index. In other words, for column with data index N, with attribute is_indexed,
                 // there's an index entry at N+1 in the data array.

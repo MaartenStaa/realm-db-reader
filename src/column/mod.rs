@@ -2,13 +2,16 @@ use std::fmt::Debug;
 
 pub use crate::column::backlink::create_backlink_column;
 pub use crate::column::bool::create_bool_column;
+pub use crate::column::bool_optional::create_bool_null_column;
 use crate::column::bptree::BpTree;
 pub use crate::column::integer::create_int_column;
+pub use crate::column::integer_optional::create_int_null_column;
 pub use crate::column::linklist::create_linklist_column;
 pub use crate::column::string::create_string_column;
 pub use crate::column::subtable::create_subtable_column;
 pub use crate::column::timestamp::create_timestamp_column;
-use crate::node::NodeWithContext;
+use crate::index::Index;
+use crate::node::{Node, NodeWithContext};
 use crate::realm::Realm;
 use crate::table::ColumnAttributes;
 use crate::{array::RealmRef, value::Value};
@@ -16,6 +19,7 @@ use std::sync::Arc;
 
 mod backlink;
 mod bool;
+mod bool_optional;
 mod bptree;
 // mod float;
 mod integer;
@@ -39,7 +43,13 @@ pub trait Column: Debug + Send {
     /// Get whether this column is nullable.
     fn nullable(&self) -> bool;
 
+    /// Is table indexed?
     fn is_indexed(&self) -> bool;
+
+    /// Look up a value for this column in the index.
+    ///
+    /// Panics if this column is not indexed.
+    fn get_row_number_by_index(&self, lookup_value: &Value) -> anyhow::Result<Option<usize>>;
 
     fn name(&self) -> Option<&str>;
 }
@@ -64,6 +74,7 @@ pub trait ColumnType {
 
 struct ColumnImpl<T: ColumnType> {
     tree: BpTree<T>,
+    index: Option<Index>,
     attributes: ColumnAttributes,
     name: Option<String>,
 }
@@ -100,7 +111,15 @@ where
     }
 
     fn is_indexed(&self) -> bool {
-        todo!()
+        self.attributes.is_indexed()
+    }
+
+    fn get_row_number_by_index(&self, lookup_value: &Value) -> anyhow::Result<Option<usize>> {
+        let Some(index) = &self.index else {
+            panic!("Column {:?} is not indexed", self.name());
+        };
+
+        index.find_first(lookup_value)
     }
 
     fn name(&self) -> Option<&str> {
@@ -111,15 +130,20 @@ where
 impl<T: ColumnType> ColumnImpl<T> {
     pub fn new(
         realm: Arc<Realm>,
-        ref_: RealmRef,
+        data_ref: RealmRef,
+        index_ref: Option<RealmRef>,
         attributes: ColumnAttributes,
         name: Option<String>,
         context: T::LeafContext,
     ) -> anyhow::Result<Self> {
-        let tree = BpTree::from_ref_with_context(realm, ref_, context)?;
+        let tree = BpTree::from_ref_with_context(Arc::clone(&realm), data_ref, context)?;
+        let index = index_ref
+            .map(|ref_| Index::from_ref(realm, ref_))
+            .transpose()?;
 
         Ok(Self {
             tree,
+            index,
             attributes,
             name,
         })
