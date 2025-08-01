@@ -24,7 +24,7 @@ impl StringColumn {
         name: String,
     ) -> anyhow::Result<Self> {
         Ok(StringColumn {
-            root: unsafe { Array::from_ref_bypass_bptree(realm, ref_)? },
+            root: Array::from_ref(realm, ref_)?,
             attributes,
             name,
         })

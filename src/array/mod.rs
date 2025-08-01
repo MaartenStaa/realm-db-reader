@@ -93,16 +93,6 @@ impl Node for Array {
 }
 
 impl Array {
-    pub unsafe fn from_ref_bypass_bptree(
-        realm: Arc<Realm>,
-        ref_: RealmRef,
-    ) -> anyhow::Result<Self> {
-        let node = RealmNode::from_ref(Arc::clone(&realm), ref_)?;
-        let width = node.header.width();
-
-        Ok(Self { node, width })
-    }
-
     #[instrument(target = "Array", level = "debug")]
     pub fn get(&self, index: usize) -> u64 {
         assert!(

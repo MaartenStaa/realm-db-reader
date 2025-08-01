@@ -17,7 +17,7 @@ pub struct Index {
 
 impl Node for Index {
     fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
-        let array = unsafe { Array::from_ref_bypass_bptree(Arc::clone(&realm), ref_)? };
+        let array = Array::from_ref(Arc::clone(&realm), ref_)?;
         assert!(array.node.header.size >= 1);
 
         let keys = array.get_node(0)?.unwrap();
@@ -96,9 +96,7 @@ impl Index {
                     return Ok(Some(row_index as usize));
                 }
                 RefOrTaggedValue::Ref(ref_) => {
-                    let array = unsafe {
-                        Array::from_ref_bypass_bptree(Arc::clone(&self.array.node.realm), ref_)?
-                    };
+                    let array = Array::from_ref(Arc::clone(&self.array.node.realm), ref_)?;
                     let is_sub_index = array.node.header.context_flag();
 
                     if !is_sub_index {

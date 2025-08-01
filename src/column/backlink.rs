@@ -1,10 +1,10 @@
 use crate::array::{Array, IntegerArray, RealmRef, RefOrTaggedValue};
-use crate::column::{ArrayLeaf, BpTree, Column, ColumnImpl, ColumnType};
+use crate::column::{ArrayLeaf, Column, ColumnImpl, ColumnType};
 use crate::node::{Node, NodeWithContext};
 use crate::realm::Realm;
 use crate::table::ColumnAttributes;
 use crate::utils::read_array_value;
-use crate::value::{Backlink, Value};
+use crate::value::Backlink;
 use std::sync::Arc;
 
 #[derive(Debug, Copy, Clone)]
@@ -95,7 +95,7 @@ impl BacklinkArrayLeaf {
     ) -> anyhow::Result<Backlink> {
         match value {
             RefOrTaggedValue::Ref(ref_) => {
-                let backlink_list = IntegerArray::from_ref(Arc::clone(&realm), ref_)?;
+                let backlink_list = IntegerArray::from_ref(Arc::clone(realm), ref_)?;
                 let values = backlink_list
                     .get_integers()
                     .into_iter()
@@ -136,4 +136,4 @@ pub fn create_backlink_column(
     )?))
 }
 
-pub type BacklinkColumn = ColumnImpl<BacklinkColumnType>;
+type BacklinkColumn = ColumnImpl<BacklinkColumnType>;
