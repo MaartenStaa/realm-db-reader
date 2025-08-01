@@ -52,7 +52,7 @@ impl SmallBlobsArray {
                 is_null == 0 || is_null == 1,
                 "Invalid null value: {is_null}"
             );
-            if is_null == 1 {
+            if is_null == 0 {
                 return match expectation {
                     Expectation::Nullable => None,
                     Expectation::NotNullable => Some(vec![]),
