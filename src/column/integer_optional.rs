@@ -13,8 +13,6 @@ impl ColumnType for IntNullableColumnType {
     type Value = Option<i64>;
     type LeafType = OptionalIntegerArrayLeaf;
     type LeafContext = ();
-
-    const IS_NULLABLE: bool = false;
 }
 
 #[derive(Debug)]

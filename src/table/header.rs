@@ -7,9 +7,9 @@ use tracing::instrument;
 
 use crate::array::{Array, ArrayStringShort, Expectation, FromU64, IntegerArray, RefOrTaggedValue};
 use crate::column::{
-    Column, create_backlink_column, create_bool_column, create_bool_null_column, create_int_column,
-    create_int_null_column, create_linklist_column, create_string_column, create_subtable_column,
-    create_timestamp_column,
+    Column, create_backlink_column, create_bool_column, create_bool_null_column,
+    create_double_column, create_float_column, create_int_column, create_int_null_column,
+    create_linklist_column, create_string_column, create_subtable_column, create_timestamp_column,
 };
 use crate::spec::ColumnType;
 use crate::table::column::ColumnAttributes;
@@ -106,30 +106,8 @@ impl TableHeader {
                     attributes,
                     column_names.pop().unwrap(),
                 )?,
-                ColumnType::Timestamp => create_timestamp_column(
-                    Arc::clone(&data_array.node.realm),
-                    data_ref,
-                    index_ref,
-                    attributes,
-                    column_names.pop().unwrap(),
-                )?,
-                ColumnType::LinkList => {
-                    let target_table_index = Self::get_sub_spec_index_value(
-                        sub_spec_array
-                            .as_ref()
-                            .ok_or(anyhow::anyhow!("Expected sub-spec array for link column"))?,
-                        sub_spec_index,
-                    )?;
-                    sub_spec_index += 1;
-
-                    create_linklist_column(
-                        Arc::clone(&data_array.node.realm),
-                        data_ref,
-                        attributes,
-                        target_table_index,
-                        column_names.pop().unwrap(),
-                    )?
-                }
+                ColumnType::OldStringEnum => todo!("Implement OldStringEnum column creation"),
+                ColumnType::Binary => todo!("Implement Binary column creation"),
                 ColumnType::Table => {
                     let other_table_header_ref = sub_spec_array
                         .as_ref()
@@ -145,6 +123,46 @@ impl TableHeader {
                         data_ref,
                         attributes,
                         name,
+                    )?
+                }
+                ColumnType::OldMixed => todo!("Implement OldMixed column creation"),
+                ColumnType::OldDateTime => todo!("Implement OldDateTime column creation"),
+                ColumnType::Timestamp => create_timestamp_column(
+                    Arc::clone(&data_array.node.realm),
+                    data_ref,
+                    index_ref,
+                    attributes,
+                    column_names.pop().unwrap(),
+                )?,
+                ColumnType::Float => create_float_column(
+                    Arc::clone(&data_array.node.realm),
+                    data_ref,
+                    attributes,
+                    column_names.pop().unwrap(),
+                )?,
+                ColumnType::Double => create_double_column(
+                    Arc::clone(&data_array.node.realm),
+                    data_ref,
+                    attributes,
+                    column_names.pop().unwrap(),
+                )?,
+                ColumnType::Reserved4 => todo!("Implement Reserved4 column creation"),
+                ColumnType::Link => todo!("Implement Link column creation"),
+                ColumnType::LinkList => {
+                    let target_table_index = Self::get_sub_spec_index_value(
+                        sub_spec_array
+                            .as_ref()
+                            .ok_or(anyhow::anyhow!("Expected sub-spec array for link column"))?,
+                        sub_spec_index,
+                    )?;
+                    sub_spec_index += 1;
+
+                    create_linklist_column(
+                        Arc::clone(&data_array.node.realm),
+                        data_ref,
+                        attributes,
+                        target_table_index,
+                        column_names.pop().unwrap(),
                     )?
                 }
                 ColumnType::BackLink => {
@@ -165,9 +183,6 @@ impl TableHeader {
                         target_table_column_index,
                     )?
                 }
-                _ => {
-                    bail!("Unsupported column type: {column_type:?}");
-                }
             };
 
             log::info!(target: "TableHeader", "Created column {column:?}");
@@ -184,51 +199,6 @@ impl TableHeader {
         }
 
         Ok(Self { columns })
-
-        // for (i, column_type) in column_types.into_iter().enumerate() {
-        //     let spec = match column_type {
-        //         ct @ (ColumnType::Link | ColumnType::LinkList) => {
-        //             let target_table = Self::get_sub_spec_index_value(
-        //                 sub_spec_array
-        //                     .as_ref()
-        //                     .ok_or(anyhow::anyhow!("Expected sub-spec array for link column"))?,
-        //                 sub_spec_index,
-        //             )?;
-        //             sub_spec_index += 1;
-        //             let name = column_names
-        //                 .pop()
-        //                 .ok_or(anyhow!("Expected column name for column index {i}"))?;
-        //             ColumnSpec::Regular {
-        //                 type_: if ct == ColumnType::Link {
-        //                     FatColumnType::Link {
-        //                         target_table_index: target_table,
-        //                     }
-        //                 } else {
-        //                     FatColumnType::LinkList {
-        //                         target_table_index: target_table,
-        //                     }
-        //                 },
-        //                 data_array_index,
-        //                 name,
-        //                 attributes: column_attributes[i],
-        //             }
-        //         }
-        //         other => {
-        //             let name = column_names.pop().ok_or(anyhow::anyhow!(
-        //                 "Expected column name for column index {i} (type {other:?})"
-        //             ))?;
-        //             let attributes = column_attributes[i];
-        //             let type_ = FatColumnType::Thin(other.as_thin_column_type()?);
-        //             ColumnSpec::Regular {
-        //                 data_array_index,
-        //                 type_,
-        //                 name,
-        //                 attributes,
-        //             }
-        //         }
-        //     };
-        //
-        //     warn!(target: "Table", "column spec {i}: {spec:?}");
     }
 
     fn get_sub_spec_index_value(

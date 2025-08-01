@@ -13,8 +13,6 @@ impl ColumnType for BoolNullableColumnType {
     type Value = Option<bool>;
     type LeafType = OptionalBoolArrayLeaf;
     type LeafContext = ();
-
-    const IS_NULLABLE: bool = false;
 }
 
 #[derive(Debug)]

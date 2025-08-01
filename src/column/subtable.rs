@@ -33,8 +33,6 @@ impl ColumnType for SubtableColumnType {
     type Value = Option<Vec<Row<'static>>>;
     type LeafType = SubtableArrayLeaf;
     type LeafContext = SubtableContext;
-
-    const IS_NULLABLE: bool = true;
 }
 
 pub struct SubtableArrayLeaf {

@@ -19,8 +19,6 @@ impl ColumnType for BacklinkColumnType {
     type Value = Option<Backlink>;
     type LeafType = BacklinkArrayLeaf;
     type LeafContext = BacklinkContext;
-
-    const IS_NULLABLE: bool = false;
 }
 
 struct BacklinkArrayLeaf {

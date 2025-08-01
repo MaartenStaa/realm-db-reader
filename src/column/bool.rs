@@ -14,8 +14,6 @@ impl ColumnType for BoolColumnType {
     type Value = bool;
     type LeafType = BoolArrayLeaf;
     type LeafContext = ();
-
-    const IS_NULLABLE: bool = false;
 }
 
 // Boolean leaf implementation - wraps Array<bool>

@@ -14,8 +14,6 @@ impl ColumnType for IntColumnType {
     type Value = i64;
     type LeafType = IntegerArrayLeaf;
     type LeafContext = ();
-
-    const IS_NULLABLE: bool = false;
 }
 
 // Integer leaf implementation - wraps IntegerArray

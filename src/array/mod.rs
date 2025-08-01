@@ -2,13 +2,14 @@ mod array_string;
 mod array_string_short;
 mod integer_array;
 mod long_blobs_array;
+mod scalar_array;
 mod small_blobs_array;
 
 pub use array_string::ArrayString;
 pub use array_string_short::ArrayStringShort;
-#[allow(unused_imports)]
 pub use integer_array::{FromU64, IntegerArray};
 pub use long_blobs_array::LongBlobsArray;
+pub use scalar_array::ScalarArray;
 pub use small_blobs_array::SmallBlobsArray;
 
 use std::fmt::Debug;

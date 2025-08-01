@@ -4,6 +4,8 @@ pub use crate::column::backlink::create_backlink_column;
 pub use crate::column::bool::create_bool_column;
 pub use crate::column::bool_optional::create_bool_null_column;
 use crate::column::bptree::BpTree;
+pub use crate::column::double::create_double_column;
+pub use crate::column::float::create_float_column;
 pub use crate::column::integer::create_int_column;
 pub use crate::column::integer_optional::create_int_null_column;
 pub use crate::column::linklist::create_linklist_column;
@@ -21,7 +23,8 @@ mod backlink;
 mod bool;
 mod bool_optional;
 mod bptree;
-// mod float;
+mod double;
+mod float;
 mod integer;
 mod integer_optional;
 mod linklist;
@@ -68,8 +71,6 @@ pub trait ColumnType {
     type Value: Into<Value>;
     type LeafType: ArrayLeaf<Self::Value, Self::LeafContext>;
     type LeafContext: Copy + Debug;
-
-    const IS_NULLABLE: bool;
 }
 
 struct ColumnImpl<T: ColumnType> {

@@ -17,8 +17,6 @@ impl ColumnType for LinkListColumnType {
     type Value = Vec<usize>;
     type LeafType = LinkListLeaf;
     type LeafContext = LinkListColumnContext;
-
-    const IS_NULLABLE: bool = false;
 }
 
 pub struct LinkListLeaf {
