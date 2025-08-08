@@ -1,12 +1,10 @@
-use crate::array::{
-    Array, ArrayString, ArrayStringShort, Expectation, LongBlobsArray, RealmRef, SmallBlobsArray,
-};
+use crate::array::{Array, ArrayString, LongBlobsArray, RealmRef, SmallBlobsArray};
 use crate::column::Column;
 use crate::column::bptree::BpTreeNode;
 use crate::index::Index;
-use crate::node::Node;
-use crate::realm::{Realm, RealmNode};
+use crate::realm::Realm;
 use crate::table::ColumnAttributes;
+use crate::traits::{ArrayLike, Node};
 use crate::value::Value;
 use std::sync::Arc;
 
@@ -44,62 +42,46 @@ impl Column for StringColumn {
     /// Get the value for this column for the row with the given index.
     fn get(&self, index: usize) -> anyhow::Result<Value> {
         if self.root_is_leaf() {
-            let long_strings = self.root.node.header.has_refs();
-            if !long_strings {
-                return Ok(ArrayStringShort::<String>::get_static(
-                    &self.root.node,
-                    index,
-                    if self.attributes.is_nullable() {
-                        Expectation::Nullable
-                    } else {
-                        Expectation::NotNullable
-                    },
-                )
-                .map(|s| s.to_owned())
-                .unwrap_or_default()
-                .into());
-            }
-
-            let is_big = self.root.node.header.context_flag();
-            let bytes = if !is_big {
-                // Medimum strings
-                self.get_from_small_blob(self.root.node.ref_, index)?
+            return Ok(if self.nullable() {
+                ArrayString::<Option<String>>::get_inner(
+                    &self.root.node.header,
+                    Arc::clone(&self.root.node.realm),
+                    self.root.node.ref_,
+                )?
+                .get(index)?
+                .into()
             } else {
-                self.get_from_long_blobs(self.root.node.ref_, index)?
-            };
-
-            return Ok(bytes.map(ArrayString::<String>::string_from_bytes).into());
+                ArrayString::<String>::get_inner(
+                    &self.root.node.header,
+                    Arc::clone(&self.root.node.realm),
+                    self.root.node.ref_,
+                )?
+                .get(index)?
+                .into()
+            });
         }
 
         // Non-leaf root
         let (leaf_ref, index_in_leaf) = BpTreeNode::new(&self.root).get_bptree_leaf(index)?;
-        let leaf_node = RealmNode::from_ref(Arc::clone(&self.root.node.realm), leaf_ref)?;
+        let leaf_header = self.root.node.realm.header(leaf_ref)?;
 
-        let long_strings = leaf_node.header.has_refs();
-        if !long_strings {
-            // Small strings
-            return Ok(ArrayStringShort::<String>::get_static(
-                &leaf_node,
-                index_in_leaf,
-                if self.attributes.is_nullable() {
-                    Expectation::Nullable
-                } else {
-                    Expectation::NotNullable
-                },
-            )
-            .map(|s| s.to_owned())
-            .unwrap_or_default()
-            .into());
-        }
-        let is_big = leaf_node.header.context_flag();
-        let bytes = if !is_big {
-            // Medimum strings
-            self.get_from_small_blob(leaf_ref, index_in_leaf)?
+        Ok(if self.nullable() {
+            ArrayString::<Option<String>>::get_inner(
+                &leaf_header,
+                Arc::clone(&self.root.node.realm),
+                leaf_ref,
+            )?
+            .get(index_in_leaf)?
+            .into()
         } else {
-            self.get_from_long_blobs(leaf_ref, index_in_leaf)?
-        };
-
-        Ok(bytes.map(ArrayString::<String>::string_from_bytes).into())
+            ArrayString::<String>::get_inner(
+                &leaf_header,
+                Arc::clone(&self.root.node.realm),
+                leaf_ref,
+            )?
+            .get(index_in_leaf)?
+            .into()
+        })
     }
 
     fn is_null(&self, index: usize) -> anyhow::Result<bool> {
@@ -117,19 +99,21 @@ impl Column for StringColumn {
             let is_big = self.root.node.header.context_flag();
             if !is_big {
                 // Small strings
-                return Ok(SmallBlobsArray::from_ref(
+                let small_blobs_array = SmallBlobsArray::from_ref(
                     Arc::clone(&self.root.node.realm),
                     self.root.node.ref_,
-                )?
-                .element_count());
+                )?;
+                return Ok(<SmallBlobsArray as ArrayLike<String>>::size(
+                    &small_blobs_array,
+                ));
             }
 
             // Long strings
-            return Ok(LongBlobsArray::from_ref(
-                Arc::clone(&self.root.node.realm),
-                self.root.node.ref_,
-            )?
-            .element_count());
+            let long_blobs_array =
+                LongBlobsArray::from_ref(Arc::clone(&self.root.node.realm), self.root.node.ref_)?;
+            return Ok(<LongBlobsArray as ArrayLike<String>>::size(
+                &long_blobs_array,
+            ));
         }
 
         // Non-leaf root
@@ -161,30 +145,6 @@ impl Column for StringColumn {
 impl StringColumn {
     fn root_is_leaf(&self) -> bool {
         !self.root.node.header.is_inner_bptree()
-    }
-
-    fn get_from_small_blob(&self, ref_: RealmRef, index: usize) -> anyhow::Result<Option<Vec<u8>>> {
-        Ok(
-            SmallBlobsArray::from_ref(Arc::clone(&self.root.node.realm), ref_)?.get(
-                index,
-                if self.nullable() {
-                    Expectation::Nullable
-                } else {
-                    Expectation::NotNullable
-                },
-            ),
-        )
-    }
-
-    fn get_from_long_blobs(&self, ref_: RealmRef, index: usize) -> anyhow::Result<Option<Vec<u8>>> {
-        LongBlobsArray::from_ref(Arc::clone(&self.root.node.realm), ref_)?.get(
-            index,
-            if self.nullable() {
-                Expectation::Nullable
-            } else {
-                Expectation::NotNullable
-            },
-        )
     }
 }
 

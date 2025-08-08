@@ -5,7 +5,7 @@ use anyhow::{anyhow, bail};
 use log::{info, warn};
 use tracing::instrument;
 
-use crate::array::{Array, ArrayStringShort, Expectation, FromU64, IntegerArray, RefOrTaggedValue};
+use crate::array::{Array, ArrayStringShort, FromU64, IntegerArray, RefOrTaggedValue};
 use crate::column::{
     Column, create_backlink_column, create_bool_column, create_bool_null_column,
     create_double_column, create_float_column, create_int_column, create_int_null_column,
@@ -13,6 +13,7 @@ use crate::column::{
 };
 use crate::spec::ColumnType;
 use crate::table::column::ColumnAttributes;
+use crate::traits::ArrayLike;
 
 #[derive(Debug)]
 pub struct TableHeader {
@@ -245,8 +246,8 @@ impl TableHeader {
         info!(target: "TableHeader", "column_types: {:?}", column_types);
 
         let column_names = {
-            let array: ArrayStringShort<String> = header_array.get_node(1)?.unwrap();
-            array.get_strings(Expectation::NotNullable)
+            let array: ArrayStringShort = header_array.get_node(1)?.unwrap();
+            array.get_all()?
         };
 
         info!(target: "TableHeader", "column_names: {:?}", column_names);

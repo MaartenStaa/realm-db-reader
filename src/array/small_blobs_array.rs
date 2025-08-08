@@ -4,31 +4,35 @@ use std::sync::Arc;
 use log::warn;
 use tracing::instrument;
 
-use crate::array::{Array, Expectation, IntegerArray, RealmRef};
-use crate::node::Node;
+use crate::array::{Array, RealmRef};
 use crate::realm::{Realm, RealmNode};
+use crate::traits::{ArrayLike, Node, NodeWithContext};
+use crate::utils;
 
 #[derive(Debug, Clone)]
 pub struct SmallBlobsArray {
-    lengths: IntegerArray,
+    lengths: Array,
     blobs: RealmNode,
-    null: Option<IntegerArray>,
+    null: Option<Array>,
 }
 
-impl Node for SmallBlobsArray {
-    fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
+impl NodeWithContext<()> for SmallBlobsArray {
+    fn from_ref_with_context(realm: Arc<Realm>, ref_: RealmRef, _: ()) -> anyhow::Result<Self>
+    where
+        Self: Sized,
+    {
         let array = Array::from_ref(realm, ref_)?;
 
         let size = array.node.header.size as usize;
         assert!(size >= 2, "SmallBlobsArray size must be at least 2");
         assert!(size <= 3, "SmallBlobsArray size must be at most 3");
 
-        let lengths_array: IntegerArray = array.get_node(0)?.unwrap();
+        let lengths_array: Array = array.get_node(0)?.unwrap();
         let blobs: RealmNode = array.get_node(1)?.unwrap();
-        let null_array: Option<IntegerArray> = if size == 3 { array.get_node(2)? } else { None };
+        let null_array: Option<Array> = if size == 3 { array.get_node(2)? } else { None };
 
-        if let Some(nullable_array) = &null_array {
-            assert!(lengths_array.element_count() == nullable_array.element_count());
+        if let Some(null_array) = &null_array {
+            assert_eq!(lengths_array.size(), null_array.size());
         }
 
         Ok(Self {
@@ -39,13 +43,9 @@ impl Node for SmallBlobsArray {
     }
 }
 
-impl SmallBlobsArray {
-    pub fn element_count(&self) -> usize {
-        self.lengths.element_count()
-    }
-
+impl ArrayLike<Option<Vec<u8>>> for SmallBlobsArray {
     #[instrument(target = "SmallBlobsArray", level = "debug")]
-    pub fn get(&self, index: usize, expectation: Expectation) -> Option<Vec<u8>> {
+    fn get(&self, index: usize) -> anyhow::Result<Option<Vec<u8>>> {
         if let Some(null_array) = &self.null {
             let is_null = null_array.get(index);
             assert!(
@@ -53,10 +53,7 @@ impl SmallBlobsArray {
                 "Invalid null value: {is_null}"
             );
             if is_null == 0 {
-                return match expectation {
-                    Expectation::Nullable => None,
-                    Expectation::NotNullable => Some(vec![]),
-                };
+                return Ok(None);
             }
         }
 
@@ -78,6 +75,94 @@ impl SmallBlobsArray {
             self.blobs.payload().len()
         );
 
-        Some(self.blobs.payload()[begin..end].to_vec())
+        Ok(Some(self.blobs.payload()[begin..end].to_vec()))
+    }
+
+    fn get_direct(
+        realm: Arc<Realm>,
+        ref_: RealmRef,
+        index: usize,
+        _: (),
+    ) -> anyhow::Result<Option<Vec<u8>>> {
+        // No real way to do this without basically reconstructing the constructor. Might as well just call that and use `get` to get the bytes.
+        let array = SmallBlobsArray::from_ref(realm, ref_)?;
+        array.get(index)
+    }
+
+    fn is_null(&self, index: usize) -> anyhow::Result<bool> {
+        if let Some(nulls) = &self.null {
+            Ok(nulls.get(index) == 0)
+        } else {
+            Ok(false)
+        }
+    }
+
+    fn size(&self) -> usize {
+        self.lengths.size()
+    }
+}
+
+impl ArrayLike<Option<String>> for SmallBlobsArray {
+    fn get(&self, index: usize) -> anyhow::Result<Option<String>> {
+        let bytes = <Self as ArrayLike<Option<Vec<u8>>>>::get(self, index)?;
+
+        Ok(bytes.map(utils::string_from_bytes))
+    }
+
+    fn get_direct(
+        realm: Arc<Realm>,
+        ref_: RealmRef,
+        index: usize,
+        context: (),
+    ) -> anyhow::Result<Option<String>>
+    where
+        Self: Sized,
+    {
+        let bytes = <Self as ArrayLike<Option<Vec<u8>>>>::get_direct(realm, ref_, index, context)?;
+
+        Ok(bytes.map(utils::string_from_bytes))
+    }
+
+    fn is_null(&self, index: usize) -> anyhow::Result<bool> {
+        if let Some(nulls) = &self.null {
+            Ok(nulls.get(index) == 0)
+        } else {
+            Ok(false)
+        }
+    }
+
+    fn size(&self) -> usize {
+        self.lengths.size()
+    }
+}
+
+impl ArrayLike<String> for SmallBlobsArray {
+    fn get(&self, index: usize) -> anyhow::Result<String> {
+        <Self as ArrayLike<Option<String>>>::get(self, index).map(|s| s.unwrap_or_default())
+    }
+
+    fn get_direct(
+        realm: Arc<Realm>,
+        ref_: RealmRef,
+        index: usize,
+        context: (),
+    ) -> anyhow::Result<String>
+    where
+        Self: Sized,
+    {
+        <Self as ArrayLike<Option<String>>>::get_direct(realm, ref_, index, context)
+            .map(|s| s.unwrap_or_default())
+    }
+
+    fn is_null(&self, index: usize) -> anyhow::Result<bool> {
+        if let Some(nulls) = &self.null {
+            Ok(nulls.get(index) == 0)
+        } else {
+            Ok(false)
+        }
+    }
+
+    fn size(&self) -> usize {
+        self.lengths.size()
     }
 }

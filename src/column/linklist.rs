@@ -1,8 +1,8 @@
 use crate::array::{Array, IntegerArray, RealmRef, RefOrTaggedValue};
-use crate::column::{ArrayLeaf, Column, ColumnImpl, ColumnType};
-use crate::node::{Node, NodeWithContext};
+use crate::column::{Column, ColumnImpl, ColumnType};
 use crate::realm::Realm;
 use crate::table::ColumnAttributes;
+use crate::traits::{ArrayLike, Node, NodeWithContext};
 use crate::utils::read_array_value;
 use std::sync::Arc;
 
@@ -19,6 +19,7 @@ impl ColumnType for LinkListColumnType {
     type LeafContext = LinkListColumnContext;
 }
 
+#[derive(Debug)]
 pub struct LinkListLeaf {
     root: Array,
 }
@@ -38,7 +39,7 @@ impl NodeWithContext<LinkListColumnContext> for LinkListLeaf {
     }
 }
 
-impl ArrayLeaf<Vec<usize>, LinkListColumnContext> for LinkListLeaf {
+impl ArrayLike<Vec<usize>, LinkListColumnContext> for LinkListLeaf {
     fn get(&self, index: usize) -> anyhow::Result<Vec<usize>> {
         let sub_array = match self.root.get_ref_or_tagged_value(index) {
             Some(RefOrTaggedValue::Ref(ref_)) => {
@@ -71,8 +72,8 @@ impl ArrayLeaf<Vec<usize>, LinkListColumnContext> for LinkListLeaf {
         Ok(Self::get_from_sub_array(sub_array))
     }
 
-    fn is_null(&self, _: usize) -> bool {
-        false
+    fn is_null(&self, _: usize) -> anyhow::Result<bool> {
+        Ok(false)
     }
 
     fn size(&self) -> usize {

@@ -1,13 +1,14 @@
 use std::{fmt::Debug, marker::PhantomData, sync::Arc};
 
-use crate::{
-    array::{Array, RealmRef},
-    column::{ArrayLeaf, ColumnType},
-    node::{Node, NodeWithContext},
-    realm::Realm,
-    utils,
-};
+use tracing::instrument;
 
+use crate::array::{Array, RealmRef};
+use crate::column::ColumnType;
+use crate::realm::Realm;
+use crate::traits::{ArrayLike, Node, NodeWithContext};
+use crate::utils;
+
+#[derive(Clone)]
 pub struct BpTree<T: ColumnType> {
     root: Array,
     context: T::LeafContext,
@@ -35,35 +36,6 @@ impl<T: ColumnType> NodeWithContext<T::LeafContext> for BpTree<T> {
             root,
             column_type: PhantomData,
             context,
-        })
-    }
-}
-
-mod sealed {
-    pub trait EmptyContext {
-        fn make() -> Self;
-    }
-
-    impl EmptyContext for () {
-        fn make() -> Self {}
-    }
-}
-
-use sealed::EmptyContext;
-use tracing::instrument;
-
-impl<T: ColumnType> Node for BpTree<T>
-where
-    T::LeafContext: sealed::EmptyContext,
-{
-    #[instrument(target = "BpTree", level = "debug")]
-    fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
-        let root = Array::from_ref(realm, ref_)?;
-
-        Ok(Self {
-            root,
-            column_type: PhantomData,
-            context: T::LeafContext::make(),
         })
     }
 }
@@ -98,7 +70,7 @@ impl<T: ColumnType> BpTree<T> {
                 self.context,
             )
             .unwrap();
-            return Ok(leaf.is_null(index));
+            return leaf.is_null(index);
         }
 
         let (leaf_ref, index_in_leaf) = self.root_as_node().get_bptree_leaf(index)?;
@@ -108,7 +80,7 @@ impl<T: ColumnType> BpTree<T> {
             self.context,
         )?;
 
-        Ok(leaf.is_null(index_in_leaf))
+        leaf.is_null(index_in_leaf)
     }
 
     #[instrument(target = "BpTree", level = "debug")]

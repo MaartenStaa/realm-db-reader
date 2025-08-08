@@ -7,7 +7,7 @@ use memmap2::Mmap;
 use tracing::instrument;
 
 use crate::array::{Array, RealmRef};
-use crate::node::Node;
+use crate::traits::Node;
 use crate::utils::read_array_value;
 
 #[derive(Clone, Copy)]

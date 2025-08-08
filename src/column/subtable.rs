@@ -16,10 +16,10 @@
 use tracing::instrument;
 
 use crate::array::{Array, RealmRef, RefOrTaggedValue};
-use crate::column::{ArrayLeaf, Column, ColumnImpl, ColumnType};
-use crate::node::{Node, NodeWithContext};
+use crate::column::{Column, ColumnImpl, ColumnType};
 use crate::realm::Realm;
 use crate::table::{ColumnAttributes, Row, Table};
+use crate::traits::{ArrayLike, Node, NodeWithContext};
 use crate::utils::read_array_value;
 use std::sync::Arc;
 
@@ -35,6 +35,7 @@ impl ColumnType for SubtableColumnType {
     type LeafContext = SubtableContext;
 }
 
+#[derive(Debug)]
 pub struct SubtableArrayLeaf {
     root: Array,
     header_array: Array,
@@ -62,7 +63,7 @@ impl NodeWithContext<SubtableContext> for SubtableArrayLeaf {
     }
 }
 
-impl ArrayLeaf<Option<Vec<Row<'static>>>, SubtableContext> for SubtableArrayLeaf {
+impl ArrayLike<Option<Vec<Row<'static>>>, SubtableContext> for SubtableArrayLeaf {
     fn get(&self, index: usize) -> anyhow::Result<Option<Vec<Row<'static>>>> {
         let Some(data_array) = self.root.get_node(index)? else {
             return Ok(None);
@@ -104,8 +105,8 @@ impl ArrayLeaf<Option<Vec<Row<'static>>>, SubtableContext> for SubtableArrayLeaf
         ))
     }
 
-    fn is_null(&self, index: usize) -> bool {
-        self.root.get_ref(index).is_none()
+    fn is_null(&self, index: usize) -> anyhow::Result<bool> {
+        Ok(self.root.get_ref(index).is_none())
     }
 
     fn size(&self) -> usize {

@@ -1,59 +1,98 @@
 use std::fmt::Debug;
-use std::marker::PhantomData;
 use std::sync::Arc;
 
-use crate::array::{Expectation, RealmRef};
-use crate::node::Node;
+use crate::array::RealmRef;
 use crate::realm::{Realm, RealmNode};
+use crate::traits::{ArrayLike, Node, NodeWithContext};
 use log::debug;
 use std::str;
 use tracing::instrument;
 
-#[derive(Clone)]
-pub struct ArrayStringShort<T> {
+#[derive(Debug, Clone)]
+pub struct ArrayStringShort {
     node: RealmNode,
-    str_type: PhantomData<T>,
 }
 
-impl<T> Debug for ArrayStringShort<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ArrayStringShort")
-            .field("node", &self.node)
-            .finish()
-    }
-}
-
-impl<T> Node for ArrayStringShort<T> {
-    // #[instrument(target = "ArrayStringShort", level = "debug")]
-    fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
+impl NodeWithContext<()> for ArrayStringShort {
+    fn from_ref_with_context(realm: Arc<Realm>, ref_: RealmRef, _: ()) -> anyhow::Result<Self>
+    where
+        Self: Sized,
+    {
         let node = RealmNode::from_ref(realm, ref_)?;
 
-        Ok(Self {
-            node,
-            str_type: PhantomData,
-        })
+        Ok(Self { node })
     }
 }
 
-impl<T> ArrayStringShort<T> {
-    pub fn element_count(&self) -> usize {
+impl ArrayLike<Option<String>> for ArrayStringShort {
+    #[instrument(target = "ArrayStringShort", level = "debug")]
+    fn get(&self, index: usize) -> anyhow::Result<Option<String>> {
+        Ok(Self::get_static(&self.node, index).map(|s| s.to_string()))
+    }
+
+    fn get_direct(
+        realm: Arc<Realm>,
+        ref_: RealmRef,
+        index: usize,
+        _: (),
+    ) -> anyhow::Result<Option<String>> {
+        let node = RealmNode::from_ref(realm, ref_)?;
+
+        Ok(Self::get_static(&node, index).map(|s| s.to_string()))
+    }
+
+    fn is_null(&self, index: usize) -> anyhow::Result<bool> {
+        let width = self.node.header.width();
+        if width == 0 {
+            return Ok(true);
+        }
+
+        // Every element has an indicator of the number of zeroes ('\0') in its
+        // last byte. Read only that last byte.
+        let width_byte_index = index * width as usize + width as usize - 1;
+        let zeroes = self.node.payload()[width_byte_index];
+
+        // The element is null if all bytes are zeroes (equal to the width).
+        Ok(zeroes == width)
+    }
+
+    fn size(&self) -> usize {
         self.node.header.size as usize
     }
+}
 
-    #[instrument(target = "ArrayStringShort", level = "debug")]
-    pub fn get(&self, index: usize, expectation: Expectation) -> Option<&str> {
-        Self::get_static(&self.node, index, expectation)
+impl ArrayLike<String> for ArrayStringShort {
+    fn get(&self, index: usize) -> anyhow::Result<String> {
+        <Self as ArrayLike<Option<String>>>::get(&self, index).map(|s| s.unwrap_or_default())
     }
 
+    fn get_direct(
+        realm: Arc<Realm>,
+        ref_: RealmRef,
+        index: usize,
+        context: (),
+    ) -> anyhow::Result<String> {
+        <Self as ArrayLike<Option<String>>>::get_direct(realm, ref_, index, context)
+            .map(|s| s.unwrap_or_default())
+    }
+
+    fn is_null(&self, _: usize) -> anyhow::Result<bool> {
+        // Implementing for `String`, so we always return false.
+        Ok(false)
+    }
+
+    fn size(&self) -> usize {
+        self.node.header.size as usize
+    }
+}
+
+impl ArrayStringShort {
     #[instrument(target = "ArrayStringShort", level = "debug")]
-    pub fn get_static(node: &RealmNode, index: usize, expectation: Expectation) -> Option<&str> {
+    fn get_static(node: &RealmNode, index: usize) -> Option<&str> {
         let width = node.header.width() as usize;
         if width == 0 {
             debug!(target: "ArrayStringShort", "get: width is 0, returning None");
-            return match expectation {
-                Expectation::Nullable => None,
-                Expectation::NotNullable => Some(""),
-            };
+            return None;
         }
 
         let element_data = &node.payload()[index * width..(index + 1) * width];
@@ -70,38 +109,5 @@ impl<T> ArrayStringShort<T> {
 
         // e.g. width = 4, zeroes = 1, element_data = [xx, xx, 00, 01]
         Some(unsafe { str::from_utf8_unchecked(&element_data[..width - 1 - zeroes]) })
-    }
-}
-
-impl ArrayStringShort<String> {
-    #[instrument(target = "ArrayStringShort", level = "debug")]
-    pub fn get_strings(&self, expectation: Expectation) -> Vec<String> {
-        (0..self.node.header.size as usize)
-            .map(|i| {
-                self.get(i, expectation)
-                    .map(|s| s.to_string())
-                    .unwrap_or_default()
-            })
-            .collect()
-    }
-}
-
-#[allow(unused)]
-impl ArrayStringShort<Option<String>> {
-    #[instrument(target = "ArrayStringShort", level = "debug")]
-    pub fn get_strings(&self, expectation: Expectation) -> Vec<Option<String>> {
-        (0..self.node.header.size as usize)
-            .map(|i| self.get(i, expectation).map(|s| s.to_string()))
-            .collect()
-    }
-}
-
-#[allow(unused)]
-impl ArrayStringShort<&str> {
-    #[instrument(target = "ArrayStringShort", level = "debug")]
-    pub fn get_strings(&self, expectation: Expectation) -> Vec<&str> {
-        (0..self.node.header.size as usize)
-            .map(|i| self.get(i, expectation).unwrap_or_default())
-            .collect()
     }
 }

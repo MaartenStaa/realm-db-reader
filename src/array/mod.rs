@@ -19,8 +19,8 @@ use std::sync::Arc;
 use log::debug;
 use tracing::instrument;
 
-use crate::node::{Node, NodeWithContext};
 use crate::realm::{Realm, RealmNode};
+use crate::traits::Node;
 use crate::utils::read_array_value;
 
 #[derive(Copy, Clone, Hash, PartialEq, Eq)]
@@ -72,12 +72,7 @@ impl RefOrTaggedValue {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum Expectation {
-    Nullable,
-    NotNullable,
-}
-
+/// Basic array. It only supports fetching u64 values.
 #[derive(Debug, Clone)]
 pub struct Array {
     pub(crate) node: RealmNode,
@@ -159,26 +154,6 @@ impl Array {
         N::from_ref(self.node.realm.clone(), ref_).map(Some)
     }
 
-    #[instrument(target = "Array", level = "debug")]
-    pub fn get_node_with_context<N: NodeWithContext<T>, T: Debug>(
-        &self,
-        index: usize,
-        context: T,
-    ) -> anyhow::Result<N> {
-        let ref_ = self.get_ref(index);
-
-        // TODO: Don't unwrap here
-        let ref_ = ref_.unwrap();
-
-        debug!(
-            target: "Array",
-            "get_node: offset={ref_:?} payload=0x{}",
-            hex::encode(self.node.payload())
-        );
-
-        N::from_ref_with_context(self.node.realm.clone(), ref_, context)
-    }
-
     pub fn front(&self) -> u64 {
         assert!(self.node.header.size > 0, "Array is empty");
 
@@ -197,5 +172,9 @@ impl Array {
     #[instrument(target = "Array", level = "debug")]
     fn get_direct(&self, width: u8, index: usize) -> u64 {
         read_array_value(self.node.payload(), self.width, index)
+    }
+
+    pub fn size(&self) -> usize {
+        self.node.header.size as usize
     }
 }

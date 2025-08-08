@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 
+use crate::array::RealmRef;
 pub use crate::column::backlink::create_backlink_column;
 pub use crate::column::bool::create_bool_column;
 pub use crate::column::bool_optional::create_bool_null_column;
@@ -13,10 +14,10 @@ pub use crate::column::string::create_string_column;
 pub use crate::column::subtable::create_subtable_column;
 pub use crate::column::timestamp::create_timestamp_column;
 use crate::index::Index;
-use crate::node::{Node, NodeWithContext};
 use crate::realm::Realm;
 use crate::table::ColumnAttributes;
-use crate::{array::RealmRef, value::Value};
+use crate::traits::{ArrayLike, Node, NodeWithContext};
+use crate::value::Value;
 use std::sync::Arc;
 
 mod backlink;
@@ -54,23 +55,15 @@ pub trait Column: Debug + Send {
     /// Panics if this column is not indexed.
     fn get_row_number_by_index(&self, lookup_value: &Value) -> anyhow::Result<Option<usize>>;
 
+    /// Get the name of this column.
     fn name(&self) -> Option<&str>;
-}
-
-/// B+Tree leaf array.
-pub trait ArrayLeaf<T, C>: NodeWithContext<C> {
-    fn get(&self, index: usize) -> anyhow::Result<T>;
-    fn get_direct(realm: Arc<Realm>, ref_: RealmRef, index: usize, context: C)
-    -> anyhow::Result<T>;
-    fn is_null(&self, index: usize) -> bool;
-    fn size(&self) -> usize;
 }
 
 /// The definition of a column type, which includes the value type, leaf type, and B+Tree type.
 pub trait ColumnType {
     type Value: Into<Value>;
-    type LeafType: ArrayLeaf<Self::Value, Self::LeafContext>;
     type LeafContext: Copy + Debug;
+    type LeafType: ArrayLike<Self::Value, Self::LeafContext>;
 }
 
 struct ColumnImpl<T: ColumnType> {

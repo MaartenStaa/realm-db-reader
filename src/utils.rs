@@ -100,6 +100,22 @@ pub fn find_bptree_child_in_payload(
     Ok((child_ref, index_in_child))
 }
 
+/// Converts a byte vector to a string, assuming it is null-terminated.
+pub fn string_from_bytes(mut bytes: Vec<u8>) -> String {
+    assert!(
+        !bytes.is_empty(),
+        "string cannot be empty (should have a trailing \\0"
+    );
+    assert!(
+        bytes[bytes.len() - 1] == 0,
+        "string must end with a \\0 byte"
+    );
+
+    bytes.pop();
+
+    unsafe { String::from_utf8_unchecked(bytes) }
+}
+
 // Lower/upper bound in sorted sequence
 // ------------------------------------
 //

@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use crate::array::{RealmRef, ScalarArray};
-use crate::column::{ArrayLeaf, Column, ColumnImpl, ColumnType};
-use crate::node::{Node, NodeWithContext};
+use crate::column::{Column, ColumnImpl, ColumnType};
 use crate::realm::Realm;
 use crate::table::ColumnAttributes;
 
@@ -12,46 +11,8 @@ pub struct DoubleColumnType;
 
 impl ColumnType for DoubleColumnType {
     type Value = f64;
-    type LeafType = DoubleArrayLeaf;
+    type LeafType = ScalarArray;
     type LeafContext = ();
-}
-
-#[derive(Debug)]
-pub struct DoubleArrayLeaf {
-    array: ScalarArray<f64>,
-}
-
-impl NodeWithContext<()> for DoubleArrayLeaf {
-    fn from_ref_with_context(realm: Arc<Realm>, ref_: RealmRef, context: ()) -> anyhow::Result<Self>
-    where
-        Self: Sized,
-    {
-        let array = ScalarArray::from_ref(realm, ref_)?;
-        Ok(Self { array })
-    }
-}
-
-impl ArrayLeaf<f64, ()> for DoubleArrayLeaf {
-    fn get(&self, index: usize) -> anyhow::Result<f64> {
-        Ok(self.array.get(index))
-    }
-
-    fn get_direct(
-        realm: Arc<Realm>,
-        ref_: RealmRef,
-        index: usize,
-        context: (),
-    ) -> anyhow::Result<f64> {
-        todo!()
-    }
-
-    fn is_null(&self, _index: usize) -> bool {
-        false // Doubles are never null in Realm
-    }
-
-    fn size(&self) -> usize {
-        self.array.node.header.size as usize
-    }
 }
 
 // Factory function for Double columns

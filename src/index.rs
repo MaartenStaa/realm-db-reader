@@ -4,8 +4,8 @@ use std::sync::Arc;
 use tracing::instrument;
 
 use crate::array::{Array, RealmRef, RefOrTaggedValue};
-use crate::node::Node;
 use crate::realm::Realm;
+use crate::traits::Node;
 use crate::utils;
 use crate::value::Value;
 

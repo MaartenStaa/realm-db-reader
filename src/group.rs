@@ -1,8 +1,9 @@
 use log::warn;
 use tracing::instrument;
 
-use crate::array::{Array, ArrayStringShort, Expectation};
+use crate::array::{Array, ArrayStringShort};
 use crate::table::Table;
+use crate::traits::ArrayLike;
 
 #[derive(Debug)]
 pub struct Group {
@@ -14,8 +15,8 @@ impl Group {
     #[instrument(target = "Group", level = "debug")]
     pub fn build(array: Array) -> anyhow::Result<Self> {
         let table_names = {
-            let array: ArrayStringShort<String> = array.get_node(0)?.unwrap();
-            array.get_strings(Expectation::NotNullable)
+            let array: ArrayStringShort = array.get_node(0)?.unwrap();
+            array.get_all()?
         };
 
         let tables_array = array.get_node(1)?.unwrap();

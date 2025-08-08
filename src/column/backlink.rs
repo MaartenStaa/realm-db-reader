@@ -1,8 +1,8 @@
 use crate::array::{Array, IntegerArray, RealmRef, RefOrTaggedValue};
-use crate::column::{ArrayLeaf, Column, ColumnImpl, ColumnType};
-use crate::node::{Node, NodeWithContext};
+use crate::column::{Column, ColumnImpl, ColumnType};
 use crate::realm::Realm;
 use crate::table::ColumnAttributes;
+use crate::traits::{ArrayLike, Node, NodeWithContext};
 use crate::utils::read_array_value;
 use crate::value::Backlink;
 use std::sync::Arc;
@@ -17,16 +17,17 @@ struct BacklinkColumnType;
 
 impl ColumnType for BacklinkColumnType {
     type Value = Option<Backlink>;
-    type LeafType = BacklinkArrayLeaf;
+    type LeafType = BacklinkArray;
     type LeafContext = BacklinkContext;
 }
 
-struct BacklinkArrayLeaf {
+#[derive(Debug)]
+struct BacklinkArray {
     root: Array,
     context: BacklinkContext,
 }
 
-impl NodeWithContext<BacklinkContext> for BacklinkArrayLeaf {
+impl NodeWithContext<BacklinkContext> for BacklinkArray {
     fn from_ref_with_context(
         realm: Arc<Realm>,
         ref_: RealmRef,
@@ -42,7 +43,7 @@ impl NodeWithContext<BacklinkContext> for BacklinkArrayLeaf {
     }
 }
 
-impl ArrayLeaf<Option<Backlink>, BacklinkContext> for BacklinkArrayLeaf {
+impl ArrayLike<Option<Backlink>, BacklinkContext> for BacklinkArray {
     fn get(&self, index: usize) -> anyhow::Result<Option<Backlink>> {
         let Some(ref_or_tagged) = self.root.get_ref_or_tagged_value(index) else {
             return Ok(None);
@@ -76,8 +77,8 @@ impl ArrayLeaf<Option<Backlink>, BacklinkContext> for BacklinkArrayLeaf {
         )?))
     }
 
-    fn is_null(&self, _: usize) -> bool {
-        false
+    fn is_null(&self, _: usize) -> anyhow::Result<bool> {
+        Ok(false)
     }
 
     fn size(&self) -> usize {
@@ -85,7 +86,7 @@ impl ArrayLeaf<Option<Backlink>, BacklinkContext> for BacklinkArrayLeaf {
     }
 }
 
-impl BacklinkArrayLeaf {
+impl BacklinkArray {
     fn get_from_ref_or_tagged_value(
         realm: &Arc<Realm>,
         value: RefOrTaggedValue,
