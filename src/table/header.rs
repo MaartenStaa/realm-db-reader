@@ -9,7 +9,8 @@ use crate::array::{Array, ArrayStringShort, FromU64, IntegerArray, RefOrTaggedVa
 use crate::column::{
     Column, create_backlink_column, create_bool_column, create_bool_null_column,
     create_double_column, create_float_column, create_int_column, create_int_null_column,
-    create_linklist_column, create_string_column, create_subtable_column, create_timestamp_column,
+    create_link_column, create_linklist_column, create_string_column, create_subtable_column,
+    create_timestamp_column,
 };
 use crate::spec::ColumnType;
 use crate::table::column::ColumnAttributes;
@@ -148,7 +149,23 @@ impl TableHeader {
                     column_names.pop().unwrap(),
                 )?,
                 ColumnType::Reserved4 => todo!("Implement Reserved4 column creation"),
-                ColumnType::Link => todo!("Implement Link column creation"),
+                ColumnType::Link => {
+                    let target_table_index = Self::get_sub_spec_index_value(
+                        sub_spec_array
+                            .as_ref()
+                            .ok_or(anyhow::anyhow!("Expected sub-spec array for link column"))?,
+                        sub_spec_index,
+                    )?;
+                    sub_spec_index += 1;
+
+                    create_link_column(
+                        Arc::clone(&data_array.node.realm),
+                        data_ref,
+                        attributes,
+                        target_table_index,
+                        column_names.pop().unwrap(),
+                    )?
+                }
                 ColumnType::LinkList => {
                     let target_table_index = Self::get_sub_spec_index_value(
                         sub_spec_array

@@ -23,7 +23,7 @@ pub enum Value {
     Float(f32),
     Double(f64),
     Reserved4,
-    Link,
+    Link(Link),
     LinkList(Vec<Link>),
     BackLink(Backlink),
 

@@ -45,6 +45,12 @@ impl From<f64> for Value {
     }
 }
 
+impl From<Link> for Value {
+    fn from(value: Link) -> Self {
+        Value::Link(value)
+    }
+}
+
 impl From<Vec<Link>> for Value {
     fn from(value: Vec<Link>) -> Self {
         Value::LinkList(value)

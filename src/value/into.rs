@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 
 use crate::{
     table::Row,
-    value::{ARRAY_VALUE_KEY, Backlink, Value},
+    value::{ARRAY_VALUE_KEY, Backlink, Link, Value},
 };
 
 macro_rules! value_try_into {
@@ -65,6 +65,7 @@ value_try_into!(bool, Bool);
 value_try_into!(DateTime<Utc>, Timestamp);
 value_try_into!(Option<DateTime<Utc>>, Timestamp);
 value_try_into!(Backlink, BackLink);
+value_try_into!(Link, Link);
 
 impl<'a, T> TryFrom<Value> for Vec<T>
 where
