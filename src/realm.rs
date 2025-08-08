@@ -202,6 +202,19 @@ impl Realm {
         let file = std::fs::File::open(path)?;
         let mmap = unsafe { Mmap::map(&file)? };
         let hdr = Header::parse(&mmap[..Header::SIZE])?;
+
+        if hdr.is_encrypted() {
+            bail!("Encrypted Realm files are not supported");
+        }
+
+        if hdr.file_format_version() != (9, 9) {
+            bail!(
+                "Unsupported Realm format version ({}.{}, supported: 9.9)",
+                hdr.file_format_version().0,
+                hdr.file_format_version().1,
+            );
+        }
+
         Ok(Realm { mmap, hdr })
     }
 
