@@ -4,6 +4,7 @@ use crate::realm::Realm;
 use crate::table::ColumnAttributes;
 use crate::traits::{ArrayLike, Node, NodeWithContext};
 use crate::utils::read_array_value;
+use crate::value::Link;
 use std::sync::Arc;
 
 pub struct LinkListColumnType;
@@ -14,7 +15,7 @@ pub struct LinkListColumnContext {
 }
 
 impl ColumnType for LinkListColumnType {
-    type Value = Vec<usize>;
+    type Value = Vec<Link>;
     type LeafType = LinkListLeaf;
     type LeafContext = LinkListColumnContext;
 }
@@ -22,25 +23,25 @@ impl ColumnType for LinkListColumnType {
 #[derive(Debug)]
 pub struct LinkListLeaf {
     root: Array,
+    context: LinkListColumnContext,
 }
 
 impl NodeWithContext<LinkListColumnContext> for LinkListLeaf {
     fn from_ref_with_context(
         realm: Arc<Realm>,
         ref_: RealmRef,
-        // TODO: Should this be part of the returned value like with the backlinks?
-        _: LinkListColumnContext,
+        context: LinkListColumnContext,
     ) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
         let root = Array::from_ref(realm, ref_)?;
-        Ok(Self { root })
+        Ok(Self { root, context })
     }
 }
 
-impl ArrayLike<Vec<usize>, LinkListColumnContext> for LinkListLeaf {
-    fn get(&self, index: usize) -> anyhow::Result<Vec<usize>> {
+impl ArrayLike<Vec<Link>, LinkListColumnContext> for LinkListLeaf {
+    fn get(&self, index: usize) -> anyhow::Result<Vec<Link>> {
         let sub_array = match self.root.get_ref_or_tagged_value(index) {
             Some(RefOrTaggedValue::Ref(ref_)) => {
                 Array::from_ref(Arc::clone(&self.root.node.realm), ref_)?
@@ -48,16 +49,15 @@ impl ArrayLike<Vec<usize>, LinkListColumnContext> for LinkListLeaf {
             _ => return Ok(vec![]),
         };
 
-        Ok(Self::get_from_sub_array(sub_array))
+        Ok(Self::get_from_sub_array(sub_array, self.context))
     }
 
     fn get_direct(
         realm: Arc<Realm>,
         ref_: RealmRef,
         index: usize,
-        // TODO: Should this be part of the returned value like with the backlinks?
-        _: LinkListColumnContext,
-    ) -> anyhow::Result<Vec<usize>> {
+        context: LinkListColumnContext,
+    ) -> anyhow::Result<Vec<Link>> {
         let header = realm.header(ref_)?;
         let payload = realm.payload(ref_, header.payload_len());
 
@@ -69,7 +69,7 @@ impl ArrayLike<Vec<usize>, LinkListColumnContext> for LinkListLeaf {
             },
         };
 
-        Ok(Self::get_from_sub_array(sub_array))
+        Ok(Self::get_from_sub_array(sub_array, context))
     }
 
     fn is_null(&self, _: usize) -> anyhow::Result<bool> {
@@ -82,13 +82,13 @@ impl ArrayLike<Vec<usize>, LinkListColumnContext> for LinkListLeaf {
 }
 
 impl LinkListLeaf {
-    fn get_from_sub_array(sub_array: Array) -> Vec<usize> {
+    fn get_from_sub_array(sub_array: Array, context: LinkListColumnContext) -> Vec<Link> {
         assert!(!sub_array.node.header.is_inner_bptree());
 
         IntegerArray::from_array(sub_array)
             .get_integers()
             .into_iter()
-            .map(|x| x as usize)
+            .map(|x| Link::new(context.target_table_index, x as usize))
             .collect::<Vec<_>>()
     }
 }

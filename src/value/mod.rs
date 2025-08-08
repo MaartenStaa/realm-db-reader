@@ -24,7 +24,7 @@ pub enum Value {
     Double(f64),
     Reserved4,
     Link,
-    LinkList(Vec<usize>),
+    LinkList(Vec<Link>),
     BackLink(Backlink),
 
     // Nullable
@@ -34,6 +34,21 @@ pub enum Value {
 impl Value {
     pub fn is_none(&self) -> bool {
         matches!(self, Value::None)
+    }
+}
+
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+pub struct Link {
+    pub target_table_index: usize,
+    pub row_index: usize,
+}
+
+impl Link {
+    pub fn new(target_table_index: usize, row_index: usize) -> Self {
+        Self {
+            target_table_index,
+            row_index,
+        }
     }
 }
 
