@@ -20,7 +20,7 @@ use crate::traits::ArrayLike;
 ///
 /// The header contains information about the columns in a table, such as their names, types, and attributes.
 #[derive(Debug)]
-pub struct TableHeader {
+pub(crate) struct TableHeader {
     columns: Vec<Box<dyn Column>>,
 }
 
@@ -243,11 +243,8 @@ impl TableHeader {
         &self.columns
     }
 
-    pub(crate) fn get_column(&self, index: usize) -> anyhow::Result<&dyn Column> {
-        self.columns
-            .get(index)
-            .map(|c| c.as_ref())
-            .ok_or_else(|| anyhow::anyhow!("No column at index {index}"))
+    pub(crate) fn get_column(&self, index: usize) -> Option<&dyn Column> {
+        self.columns.get(index).map(|c| c.as_ref())
     }
 }
 

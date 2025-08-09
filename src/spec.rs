@@ -4,7 +4,7 @@ use crate::array::FromU64;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 #[allow(unused)]
-pub enum ColumnType {
+pub(crate) enum ColumnType {
     Int = 0,
     Bool = 1,
     String = 2,
@@ -29,14 +29,14 @@ impl FromU64 for ColumnType {
 }
 
 impl ColumnType {
-    pub fn has_sub_spec(&self) -> bool {
+    pub(crate) fn has_sub_spec(&self) -> bool {
         matches!(
             self,
             ColumnType::Table | ColumnType::Link | ColumnType::LinkList | ColumnType::BackLink
         )
     }
 
-    pub fn sub_spec_entries_count(&self) -> usize {
+    pub(crate) fn sub_spec_entries_count(&self) -> usize {
         match self {
             ColumnType::Table | ColumnType::Link | ColumnType::LinkList => 1,
             ColumnType::BackLink => 2,

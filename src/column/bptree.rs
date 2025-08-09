@@ -9,7 +9,7 @@ use crate::traits::{ArrayLike, Node, NodeWithContext};
 use crate::utils;
 
 #[derive(Clone)]
-pub struct BpTree<T: ColumnType> {
+pub(crate) struct BpTree<T: ColumnType> {
     root: Array,
     context: T::LeafContext,
     column_type: PhantomData<T>,
@@ -84,7 +84,7 @@ impl<T: ColumnType> BpTree<T> {
     }
 
     #[instrument(target = "BpTree", level = "debug")]
-    pub fn count(&self) -> anyhow::Result<usize> {
+    pub(crate) fn count(&self) -> anyhow::Result<usize> {
         Ok(if self.root_is_leaf() {
             self.root_as_leaf()?.size()
         } else {

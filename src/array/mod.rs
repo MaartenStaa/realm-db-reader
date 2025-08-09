@@ -5,12 +5,12 @@ mod long_blobs_array;
 mod scalar_array;
 mod small_blobs_array;
 
-pub use array_string::ArrayString;
-pub use array_string_short::ArrayStringShort;
-pub use integer_array::{FromU64, IntegerArray};
-pub use long_blobs_array::LongBlobsArray;
-pub use scalar_array::ScalarArray;
-pub use small_blobs_array::SmallBlobsArray;
+pub(crate) use array_string::ArrayString;
+pub(crate) use array_string_short::ArrayStringShort;
+pub(crate) use integer_array::{FromU64, IntegerArray};
+pub(crate) use long_blobs_array::LongBlobsArray;
+pub(crate) use scalar_array::ScalarArray;
+pub(crate) use small_blobs_array::SmallBlobsArray;
 
 use std::fmt::Debug;
 use std::ops::Add;
@@ -24,7 +24,7 @@ use crate::traits::Node;
 use crate::utils::read_array_value;
 
 #[derive(Copy, Clone, Hash, PartialEq, Eq)]
-pub struct RealmRef(usize);
+pub(crate) struct RealmRef(usize);
 
 impl Debug for RealmRef {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -33,13 +33,13 @@ impl Debug for RealmRef {
 }
 
 impl RealmRef {
-    pub fn new(ref_: usize) -> Self {
+    pub(crate) fn new(ref_: usize) -> Self {
         assert!(ref_ % 8 == 0, "RealmRef must be a multiple of 8");
 
         Self(ref_)
     }
 
-    pub fn to_offset(self) -> usize {
+    pub(crate) fn to_offset(self) -> usize {
         self.0
     }
 }
@@ -53,28 +53,24 @@ impl Add<usize> for RealmRef {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum RefOrTaggedValue {
+pub(crate) enum RefOrTaggedValue {
     Ref(RealmRef),
     TaggedValue(u64),
 }
 
 impl RefOrTaggedValue {
-    pub fn from_raw(value: u64) -> Self {
+    pub(crate) fn from_raw(value: u64) -> Self {
         if value & 1 == 0 {
             Self::Ref(RealmRef(value as usize))
         } else {
             Self::TaggedValue(value >> 1)
         }
     }
-
-    pub fn from_ref(ref_: RealmRef) -> Self {
-        Self::Ref(ref_)
-    }
 }
 
 /// Basic array. It only supports fetching u64 values.
 #[derive(Debug, Clone)]
-pub struct Array {
+pub(crate) struct Array {
     pub(crate) node: RealmNode,
     width: u8,
 }
@@ -90,7 +86,7 @@ impl Node for Array {
 
 impl Array {
     #[instrument(target = "Array", level = "debug")]
-    pub fn get(&self, index: usize) -> u64 {
+    pub(crate) fn get(&self, index: usize) -> u64 {
         assert!(
             index < self.node.header.size as usize,
             "Index out of bounds: {index} >= {}",
@@ -101,7 +97,7 @@ impl Array {
     }
 
     #[instrument(target = "Array", level = "debug")]
-    pub fn get_ref(&self, index: usize) -> Option<RealmRef> {
+    pub(crate) fn get_ref(&self, index: usize) -> Option<RealmRef> {
         assert!(
             index < self.node.header.size as usize,
             "Index out of bounds: {index} >= {}",
@@ -120,7 +116,7 @@ impl Array {
     }
 
     #[instrument(target = "Array", level = "debug")]
-    pub fn get_ref_or_tagged_value(&self, index: usize) -> Option<RefOrTaggedValue> {
+    pub(crate) fn get_ref_or_tagged_value(&self, index: usize) -> Option<RefOrTaggedValue> {
         assert!(
             index < self.node.header.size as usize,
             "Index out of bounds: {index} >= {}",
@@ -137,7 +133,7 @@ impl Array {
     }
 
     #[instrument(target = "Array", level = "debug")]
-    pub fn get_node<N>(&self, index: usize) -> anyhow::Result<Option<N>>
+    pub(crate) fn get_node<N>(&self, index: usize) -> anyhow::Result<Option<N>>
     where
         N: Node,
     {
@@ -154,13 +150,7 @@ impl Array {
         N::from_ref(self.node.realm.clone(), ref_).map(Some)
     }
 
-    pub fn front(&self) -> u64 {
-        assert!(self.node.header.size > 0, "Array is empty");
-
-        read_array_value(self.node.payload(), self.width, 0)
-    }
-
-    pub fn back(&self) -> u64 {
+    pub(crate) fn back(&self) -> u64 {
         let size = self.node.header.size as usize;
         if size == 0 {
             return 0;
@@ -174,7 +164,7 @@ impl Array {
         read_array_value(self.node.payload(), self.width, index)
     }
 
-    pub fn size(&self) -> usize {
+    pub(crate) fn size(&self) -> usize {
         self.node.header.size as usize
     }
 }

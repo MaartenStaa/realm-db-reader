@@ -7,7 +7,7 @@ use crate::table::ColumnAttributes;
 
 // Double column type implementation
 #[derive(Debug, Clone)]
-pub struct DoubleColumnType;
+pub(crate) struct DoubleColumnType;
 
 impl ColumnType for DoubleColumnType {
     type Value = f64;
@@ -16,7 +16,7 @@ impl ColumnType for DoubleColumnType {
 }
 
 // Factory function for Double columns
-pub fn create_double_column(
+pub(crate) fn create_double_column(
     realm: Arc<Realm>,
     data_ref: RealmRef,
     attributes: ColumnAttributes,
@@ -34,4 +34,4 @@ pub fn create_double_column(
 }
 
 // Type alias for convenience
-pub type DoubleColumn = ColumnImpl<DoubleColumnType>;
+pub(crate) type DoubleColumn = ColumnImpl<DoubleColumnType>;

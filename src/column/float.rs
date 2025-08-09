@@ -7,7 +7,7 @@ use crate::table::ColumnAttributes;
 
 // Float column type implementation
 #[derive(Debug, Clone)]
-pub struct FloatColumnType;
+pub(crate) struct FloatColumnType;
 
 impl ColumnType for FloatColumnType {
     type Value = f32;
@@ -16,7 +16,7 @@ impl ColumnType for FloatColumnType {
 }
 
 // Factory function for float columns
-pub fn create_float_column(
+pub(crate) fn create_float_column(
     realm: Arc<Realm>,
     data_ref: RealmRef,
     attributes: ColumnAttributes,
@@ -34,4 +34,4 @@ pub fn create_float_column(
 }
 
 // Type alias for convenience
-pub type FloatColumn = ColumnImpl<FloatColumnType>;
+pub(crate) type FloatColumn = ColumnImpl<FloatColumnType>;

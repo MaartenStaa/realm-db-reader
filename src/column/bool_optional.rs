@@ -5,7 +5,7 @@ use crate::table::ColumnAttributes;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
-pub struct BoolNullableColumnType;
+pub(crate) struct BoolNullableColumnType;
 
 impl ColumnType for BoolNullableColumnType {
     type Value = Option<bool>;
@@ -14,7 +14,7 @@ impl ColumnType for BoolNullableColumnType {
 }
 
 // Factory function for nullable bool columns
-pub fn create_bool_null_column(
+pub(crate) fn create_bool_null_column(
     realm: Arc<Realm>,
     data_ref: RealmRef,
     index_ref: Option<RealmRef>,
@@ -32,4 +32,4 @@ pub fn create_bool_null_column(
 }
 
 // Type alias for convenience
-pub type BoolNullColumn = ColumnImpl<BoolNullableColumnType>;
+pub(crate) type BoolNullColumn = ColumnImpl<BoolNullableColumnType>;

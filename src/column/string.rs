@@ -9,7 +9,7 @@ use crate::value::Value;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
-pub struct StringColumn {
+pub(crate) struct StringColumn {
     root: Array,
     index: Option<Index>,
     attributes: ColumnAttributes,
@@ -17,7 +17,7 @@ pub struct StringColumn {
 }
 
 impl StringColumn {
-    pub fn new(
+    pub(crate) fn new(
         realm: Arc<Realm>,
         data_ref: RealmRef,
         index_ref: Option<RealmRef>,
@@ -149,7 +149,7 @@ impl StringColumn {
 }
 
 // Factory function for string columns
-pub fn create_string_column(
+pub(crate) fn create_string_column(
     realm: Arc<Realm>,
     data_ref: RealmRef,
     index_ref: Option<RealmRef>,

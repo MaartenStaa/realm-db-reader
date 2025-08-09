@@ -12,7 +12,7 @@ pub struct Row<'a> {
 }
 
 impl<'a> Row<'a> {
-    pub fn new(mut row: Vec<Value>, column_names: Vec<Cow<'a, str>>) -> Self {
+    pub(crate) fn new(mut row: Vec<Value>, column_names: Vec<Cow<'a, str>>) -> Self {
         let backlinks = row
             .extract_if(.., |v| matches!(v, Value::BackLink(_)))
             .map(|v| {

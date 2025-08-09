@@ -1,19 +1,19 @@
 use std::fmt::Debug;
 
 use crate::array::RealmRef;
-pub use crate::column::backlink::create_backlink_column;
-pub use crate::column::bool::create_bool_column;
-pub use crate::column::bool_optional::create_bool_null_column;
+pub(crate) use crate::column::backlink::create_backlink_column;
+pub(crate) use crate::column::bool::create_bool_column;
+pub(crate) use crate::column::bool_optional::create_bool_null_column;
 use crate::column::bptree::BpTree;
-pub use crate::column::double::create_double_column;
-pub use crate::column::float::create_float_column;
-pub use crate::column::integer::create_int_column;
-pub use crate::column::integer_optional::create_int_null_column;
-pub use crate::column::link::create_link_column;
-pub use crate::column::linklist::create_linklist_column;
-pub use crate::column::string::create_string_column;
-pub use crate::column::subtable::create_subtable_column;
-pub use crate::column::timestamp::create_timestamp_column;
+pub(crate) use crate::column::double::create_double_column;
+pub(crate) use crate::column::float::create_float_column;
+pub(crate) use crate::column::integer::create_int_column;
+pub(crate) use crate::column::integer_optional::create_int_null_column;
+pub(crate) use crate::column::link::create_link_column;
+pub(crate) use crate::column::linklist::create_linklist_column;
+pub(crate) use crate::column::string::create_string_column;
+pub(crate) use crate::column::subtable::create_subtable_column;
+pub(crate) use crate::column::timestamp::create_timestamp_column;
 use crate::index::Index;
 use crate::realm::Realm;
 use crate::table::ColumnAttributes;
@@ -66,7 +66,7 @@ pub trait Column: Debug + Send {
 }
 
 /// The definition of a column type, which includes the value type, leaf type, and B+Tree type.
-pub trait ColumnType {
+pub(crate) trait ColumnType {
     type Value: Into<Value>;
     type LeafContext: Copy + Debug;
     type LeafType: ArrayLike<Self::Value, Self::LeafContext>;
@@ -128,7 +128,7 @@ where
 }
 
 impl<T: ColumnType> ColumnImpl<T> {
-    pub fn new(
+    pub(crate) fn new(
         realm: Arc<Realm>,
         data_ref: RealmRef,
         index_ref: Option<RealmRef>,

@@ -10,8 +10,11 @@ use crate::Group;
 use crate::array::{Array, RealmRef};
 use crate::traits::Node;
 
+/// The header for a Realm file.
 #[derive(Clone, Copy)]
 pub(crate) struct Header {
+    /// The two possible top references. Each element points to a [`crate::group::Group`].
+    /// The least significant bit of flags indicates which of the two references is active.
     top_ref: [u64; 2],
     magic: [u8; 4],
     fmt_ver: [u8; 2],
@@ -70,11 +73,11 @@ impl Header {
     }
 }
 
+/// The header for a single node in a Realm file.
 #[derive(Clone, Copy)]
-pub struct NodeHeader {
-    pub checksum: u32, // 0x4141_4141 in current files
-    pub flags: u8,
-    pub size: u32, // 24-bit little-endian count
+pub(crate) struct NodeHeader {
+    pub(crate) flags: u8,
+    pub(crate) size: u32, // 24-bit little-endian count
 }
 
 impl Debug for NodeHeader {
@@ -89,17 +92,16 @@ impl Debug for NodeHeader {
     }
 }
 
-pub enum NodeType {
-    InnerBptree,
-    HasRefs,
-    Normal,
-}
-
 impl NodeHeader {
-    pub const SIZE: usize = 8;
-    pub const DUMMY_CHECKSUM: u32 = 0x4141_4141;
+    pub(crate) const SIZE: usize = 8;
+    pub(crate) const DUMMY_CHECKSUM: u32 = 0x4141_4141;
 
-    pub fn parse(buf: &[u8]) -> anyhow::Result<Self> {
+    /// Parse a node header from a buffer.
+    ///
+    /// Returns an error if the buffer is too small.
+    ///
+    /// Panics if the checksum is invalid.
+    pub(crate) fn parse(buf: &[u8]) -> anyhow::Result<Self> {
         if buf.len() < Self::SIZE {
             bail!("node too small");
         }
@@ -110,33 +112,37 @@ impl NodeHeader {
 
         assert_eq!(checksum, Self::DUMMY_CHECKSUM, "invalid checksum");
 
-        Ok(Self {
-            checksum,
-            flags,
-            size,
-        })
+        Ok(Self { flags, size })
     }
 
-    /* flag helpers --------------------------------------------------------- */
-    pub fn is_inner_bptree(&self) -> bool {
+    /// Returns true if the node is an inner B+Tree node.
+    pub(crate) fn is_inner_bptree(&self) -> bool {
         self.flags & 0x80 != 0
     }
-    pub fn has_refs(&self) -> bool {
+
+    /// Returns true if the node has references.
+    pub(crate) fn has_refs(&self) -> bool {
         self.flags & 0x40 != 0
     }
-    pub fn context_flag(&self) -> bool {
+
+    /// Returns true if the context flag is set.
+    ///
+    /// The meaning of this value varies by context.
+    pub(crate) fn context_flag(&self) -> bool {
         self.flags & 0x20 != 0
     }
+
     #[inline]
-    pub fn width_scheme(&self) -> u8 {
+    fn width_scheme(&self) -> u8 {
         (self.flags & 0x18) >> 3
     }
+
     #[inline]
-    pub fn width(&self) -> u8 {
+    pub(crate) fn width(&self) -> u8 {
         (1 << (self.flags & 0x07)) >> 1
     }
 
-    pub fn payload_len(&self) -> usize {
+    pub(crate) fn payload_len(&self) -> usize {
         let width = self.width() as u32;
         let num_bytes = match self.width_scheme() {
             0 => {
@@ -156,16 +162,6 @@ impl NodeHeader {
         // Ensure 8-byte alignment
         // ((num_bytes + 7) & !7) as usize
         num_bytes as usize
-    }
-
-    pub fn get_type(&self) -> NodeType {
-        if self.is_inner_bptree() {
-            NodeType::InnerBptree
-        } else if self.has_refs() {
-            NodeType::HasRefs
-        } else {
-            NodeType::Normal
-        }
     }
 }
 

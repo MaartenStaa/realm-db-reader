@@ -30,7 +30,7 @@ pub struct Group {
 
 impl Group {
     #[instrument(target = "Group", level = "debug")]
-    pub fn build(array: Array) -> anyhow::Result<Self> {
+    pub(crate) fn build(array: Array) -> anyhow::Result<Self> {
         let table_names = {
             let array: ArrayStringShort = array.get_node(0)?.unwrap();
             array.get_all()?

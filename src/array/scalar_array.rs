@@ -11,7 +11,7 @@ use crate::utils::read_array_value;
 use super::RealmRef;
 
 #[derive(Debug)]
-pub struct ScalarArray {
+pub(crate) struct ScalarArray {
     node: RealmNode,
 }
 

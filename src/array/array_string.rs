@@ -9,7 +9,7 @@ use crate::array::{ArrayStringShort, RealmRef};
 use crate::realm::{NodeHeader, Realm};
 use crate::traits::{ArrayLike, Node, NodeWithContext};
 
-pub struct ArrayString<T> {
+pub(crate) struct ArrayString<T> {
     size: usize,
     inner: Box<dyn ArrayLike<T>>,
 }

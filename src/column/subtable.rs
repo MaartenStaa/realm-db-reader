@@ -24,11 +24,11 @@ use crate::utils::read_array_value;
 use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy)]
-pub struct SubtableContext {
+pub(crate) struct SubtableContext {
     header_ref: RealmRef,
 }
 
-pub struct SubtableColumnType;
+pub(crate) struct SubtableColumnType;
 impl ColumnType for SubtableColumnType {
     type Value = Option<Vec<Row<'static>>>;
     type LeafType = SubtableArrayLeaf;
@@ -36,7 +36,7 @@ impl ColumnType for SubtableColumnType {
 }
 
 #[derive(Debug)]
-pub struct SubtableArrayLeaf {
+pub(crate) struct SubtableArrayLeaf {
     root: Array,
     header_array: Array,
 }
@@ -115,7 +115,7 @@ impl ArrayLike<Option<Vec<Row<'static>>>, SubtableContext> for SubtableArrayLeaf
 }
 
 // Factory function for subtable columns
-pub fn create_subtable_column(
+pub(crate) fn create_subtable_column(
     realm: Arc<Realm>,
     header_ref: RealmRef,
     data_ref: RealmRef,
@@ -133,4 +133,4 @@ pub fn create_subtable_column(
     )?))
 }
 
-pub type SubtableColumn = ColumnImpl<SubtableColumnType>;
+pub(crate) type SubtableColumn = ColumnImpl<SubtableColumnType>;

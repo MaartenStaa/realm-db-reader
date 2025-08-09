@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 // Boolean column type implementation
 #[derive(Debug, Clone)]
-pub struct BoolColumnType;
+pub(crate) struct BoolColumnType;
 
 impl ColumnType for BoolColumnType {
     type Value = bool;
@@ -15,7 +15,7 @@ impl ColumnType for BoolColumnType {
 }
 
 // Factory function for boolean columns
-pub fn create_bool_column(
+pub(crate) fn create_bool_column(
     realm: Arc<Realm>,
     data_ref: RealmRef,
     index_ref: Option<RealmRef>,
@@ -33,4 +33,4 @@ pub fn create_bool_column(
 }
 
 // Type alias for convenience
-pub type BoolColumn = ColumnImpl<BoolColumnType>;
+pub(crate) type BoolColumn = ColumnImpl<BoolColumnType>;

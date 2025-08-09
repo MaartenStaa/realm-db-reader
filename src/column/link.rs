@@ -7,10 +7,10 @@ use crate::utils::read_array_value;
 use crate::value::Link;
 use std::sync::Arc;
 
-pub struct LinkColumnType;
+pub(crate) struct LinkColumnType;
 
 #[derive(Debug, Copy, Clone)]
-pub struct LinkColumnContext {
+pub(crate) struct LinkColumnContext {
     target_table_index: usize,
 }
 
@@ -21,7 +21,7 @@ impl ColumnType for LinkColumnType {
 }
 
 #[derive(Debug)]
-pub struct LinkLeaf {
+pub(crate) struct LinkLeaf {
     root: Array,
     context: LinkColumnContext,
 }
@@ -81,7 +81,7 @@ impl ArrayLike<Option<Link>, LinkColumnContext> for LinkLeaf {
 }
 
 // Factory function for link columns
-pub fn create_link_column(
+pub(crate) fn create_link_column(
     realm: Arc<Realm>,
     ref_: RealmRef,
     attributes: ColumnAttributes,
@@ -99,4 +99,4 @@ pub fn create_link_column(
     )?))
 }
 
-pub type LinkColumn = ColumnImpl<LinkColumnType>;
+pub(crate) type LinkColumn = ColumnImpl<LinkColumnType>;

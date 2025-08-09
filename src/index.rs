@@ -10,7 +10,7 @@ use crate::utils;
 use crate::value::Value;
 
 #[derive(Debug, Clone)]
-pub struct Index {
+pub(crate) struct Index {
     array: Array,
     offsets: Array,
 }
@@ -36,7 +36,7 @@ impl Index {
     const KEY_SIZE_BITS: u8 = Self::KEY_SIZE * 8;
 
     #[instrument(target = "Index", level = "debug", skip(self))]
-    pub fn find_first(&self, value: &Value) -> anyhow::Result<Option<usize>> {
+    pub(crate) fn find_first(&self, value: &Value) -> anyhow::Result<Option<usize>> {
         let value = Self::coerce_to_string(value);
 
         let mut value_offset: usize = 0;

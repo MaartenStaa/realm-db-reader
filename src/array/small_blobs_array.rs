@@ -10,7 +10,7 @@ use crate::traits::{ArrayLike, Node, NodeWithContext};
 use crate::utils;
 
 #[derive(Debug, Clone)]
-pub struct SmallBlobsArray {
+pub(crate) struct SmallBlobsArray {
     lengths: Array,
     blobs: RealmNode,
     null: Option<Array>,

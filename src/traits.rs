@@ -6,7 +6,7 @@ use crate::array::RealmRef;
 
 /// Trait for nodes in the realm. A node is a struct that can be created from a
 /// reference to its realm and reference.
-pub trait Node {
+pub(crate) trait Node {
     fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self>
     where
         Self: Sized;
@@ -27,7 +27,7 @@ where
 
 /// Trait for nodes in the realm, holding a context. A node is a struct that can
 /// be created from a reference to its realm and reference.
-pub trait NodeWithContext<T> {
+pub(crate) trait NodeWithContext<T> {
     fn from_ref_with_context(realm: Arc<Realm>, ref_: RealmRef, context: T) -> anyhow::Result<Self>
     where
         Self: Sized;

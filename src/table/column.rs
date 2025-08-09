@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use crate::array::FromU64;
 
 #[derive(Copy, Clone)]
-pub struct ColumnAttributes(u64);
+pub(crate) struct ColumnAttributes(u64);
 
 impl ColumnAttributes {
     const INDEXED: u64 = 1 << 0;
@@ -12,27 +12,27 @@ impl ColumnAttributes {
     const STRONG_LINKS: u64 = 1 << 3;
     const NULLABLE: u64 = 1 << 4;
 
-    pub fn new(attributes: u64) -> Self {
+    pub(crate) fn new(attributes: u64) -> Self {
         Self(attributes)
     }
 
-    pub fn is_indexed(&self) -> bool {
+    pub(crate) fn is_indexed(&self) -> bool {
         self.0 & Self::INDEXED != 0
     }
 
-    pub fn is_unique(&self) -> bool {
+    pub(crate) fn is_unique(&self) -> bool {
         self.0 & Self::UNIQUE != 0
     }
 
-    pub fn is_reserved(&self) -> bool {
+    pub(crate) fn is_reserved(&self) -> bool {
         self.0 & Self::RESERVED != 0
     }
 
-    pub fn is_strong_links(&self) -> bool {
+    pub(crate) fn is_strong_links(&self) -> bool {
         self.0 & Self::STRONG_LINKS != 0
     }
 
-    pub fn is_nullable(&self) -> bool {
+    pub(crate) fn is_nullable(&self) -> bool {
         self.0 & Self::NULLABLE != 0
     }
 }

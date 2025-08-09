@@ -11,7 +11,7 @@ use crate::traits::{ArrayLike, Node, NodeWithContext};
 use crate::utils::{self, read_array_value};
 
 #[derive(Debug, Clone)]
-pub struct LongBlobsArray {
+pub(crate) struct LongBlobsArray {
     array: Array,
 }
 

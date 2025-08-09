@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 // Integer column type implementation
 #[derive(Debug, Clone)]
-pub struct IntColumnType;
+pub(crate) struct IntColumnType;
 
 impl ColumnType for IntColumnType {
     type Value = i64;
@@ -15,7 +15,7 @@ impl ColumnType for IntColumnType {
 }
 
 // Factory function for integer columns
-pub fn create_int_column(
+pub(crate) fn create_int_column(
     realm: Arc<Realm>,
     data_ref: RealmRef,
     index_ref: Option<RealmRef>,
@@ -33,4 +33,4 @@ pub fn create_int_column(
 }
 
 // Type alias for convenience
-pub type IntColumn = ColumnImpl<IntColumnType>;
+pub(crate) type IntColumn = ColumnImpl<IntColumnType>;

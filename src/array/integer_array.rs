@@ -6,12 +6,12 @@ use crate::realm::Realm;
 use crate::traits::{ArrayLike, Node, NodeWithContext};
 use crate::utils::read_array_value;
 
-pub trait FromU64 {
+pub(crate) trait FromU64 {
     fn from_u64(value: u64) -> Self;
 }
 
 #[derive(Debug, Clone)]
-pub struct IntegerArray {
+pub(crate) struct IntegerArray {
     array: Array,
 }
 
@@ -119,13 +119,13 @@ impl ArrayLike<Option<i64>> for IntegerArray {
 }
 
 impl IntegerArray {
-    pub fn from_array(array: Array) -> Self {
+    pub(crate) fn from_array(array: Array) -> Self {
         Self { array }
     }
 }
 
 impl IntegerArray {
-    pub fn get_integers(&self) -> Vec<u64> {
+    pub(crate) fn get_integers(&self) -> Vec<u64> {
         (0..self.array.node.header.size as usize)
             .map(|i| self.array.get(i))
             .collect()

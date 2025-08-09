@@ -8,8 +8,8 @@ use tracing::instrument;
 
 use crate::array::Array;
 use crate::column::Column;
-pub use crate::table::column::ColumnAttributes;
-pub use crate::table::header::TableHeader;
+pub(crate) use crate::table::column::ColumnAttributes;
+use crate::table::header::TableHeader;
 pub use crate::table::row::Row;
 use crate::value::Value;
 
@@ -24,7 +24,7 @@ pub struct Table {
 impl Table {
     /// Construct a new table instance, from the given Realm array.
     #[instrument(target = "Table", level = "debug")]
-    pub fn build(array: Array, table_number: usize) -> anyhow::Result<Self> {
+    pub(crate) fn build(array: Array, table_number: usize) -> anyhow::Result<Self> {
         let header_array = array.get_node(0)?.unwrap();
         let data_array = array.get_node(1)?.unwrap();
 

@@ -11,7 +11,7 @@ use chrono::DateTime;
 use std::sync::Arc;
 
 #[derive(Debug)]
-pub struct TimestampColumn {
+pub(crate) struct TimestampColumn {
     seconds: BpTree<IntNullableColumnType>,
     nanoseconds: BpTree<IntColumnType>,
     index: Option<Index>,
@@ -20,7 +20,7 @@ pub struct TimestampColumn {
 }
 
 impl TimestampColumn {
-    pub fn new(
+    pub(crate) fn new(
         realm: Arc<Realm>,
         data_ref: RealmRef,
         index_ref: Option<RealmRef>,
@@ -95,7 +95,7 @@ impl Column for TimestampColumn {
 }
 
 // Factory function for timestamp columns
-pub fn create_timestamp_column(
+pub(crate) fn create_timestamp_column(
     realm: Arc<Realm>,
     data_ref: RealmRef,
     index_ref: Option<RealmRef>,

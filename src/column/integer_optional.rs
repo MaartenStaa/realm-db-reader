@@ -5,7 +5,7 @@ use crate::table::ColumnAttributes;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
-pub struct IntNullableColumnType;
+pub(crate) struct IntNullableColumnType;
 
 impl ColumnType for IntNullableColumnType {
     type Value = Option<i64>;
@@ -14,7 +14,7 @@ impl ColumnType for IntNullableColumnType {
 }
 
 // Factory function for integer columns
-pub fn create_int_null_column(
+pub(crate) fn create_int_null_column(
     realm: Arc<Realm>,
     data_ref: RealmRef,
     index_ref: Option<RealmRef>,
@@ -32,4 +32,4 @@ pub fn create_int_null_column(
 }
 
 // Type alias for convenience
-pub type IntNullColumn = ColumnImpl<IntNullableColumnType>;
+pub(crate) type IntNullColumn = ColumnImpl<IntNullableColumnType>;

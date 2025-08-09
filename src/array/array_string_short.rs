@@ -9,7 +9,7 @@ use std::str;
 use tracing::instrument;
 
 #[derive(Debug, Clone)]
-pub struct ArrayStringShort {
+pub(crate) struct ArrayStringShort {
     node: RealmNode,
 }
 
@@ -63,7 +63,7 @@ impl ArrayLike<Option<String>> for ArrayStringShort {
 
 impl ArrayLike<String> for ArrayStringShort {
     fn get(&self, index: usize) -> anyhow::Result<String> {
-        <Self as ArrayLike<Option<String>>>::get(&self, index).map(|s| s.unwrap_or_default())
+        <Self as ArrayLike<Option<String>>>::get(self, index).map(|s| s.unwrap_or_default())
     }
 
     fn get_direct(

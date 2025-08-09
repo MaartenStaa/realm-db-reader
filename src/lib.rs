@@ -86,15 +86,19 @@
 mod array;
 mod column;
 mod debug;
-pub mod group;
+mod group;
 mod index;
 mod model;
-pub mod realm;
+mod realm;
 mod spec;
-pub mod table;
+mod table;
 mod traits;
 mod utils;
-pub mod value;
+mod value;
 
+// Export public types.
+pub use column::Column;
 pub use group::Group;
 pub use realm::Realm;
+pub use table::{Row, Table};
+pub use value::{Backlink, Link, Value};

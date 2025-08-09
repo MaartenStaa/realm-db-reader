@@ -9,8 +9,8 @@ use std::sync::Arc;
 
 #[derive(Debug, Copy, Clone)]
 struct BacklinkContext {
-    target_table_index: usize,
-    target_table_column_index: usize,
+    target_table_number: usize,
+    target_table_column_number: usize,
 }
 
 struct BacklinkColumnType;
@@ -101,14 +101,14 @@ impl BacklinkArray {
                     .map(|n| n as usize)
                     .collect();
                 Ok(Backlink::new(
-                    context.target_table_index,
-                    context.target_table_column_index,
+                    context.target_table_number,
+                    context.target_table_column_number,
                     values,
                 ))
             }
             RefOrTaggedValue::TaggedValue(value) => Ok(Backlink::new(
-                context.target_table_index,
-                context.target_table_column_index,
+                context.target_table_number,
+                context.target_table_column_number,
                 vec![value as usize],
             )),
         }
@@ -116,12 +116,12 @@ impl BacklinkArray {
 }
 
 // Factory function for boolean columns
-pub fn create_backlink_column(
+pub(crate) fn create_backlink_column(
     realm: Arc<Realm>,
     ref_: RealmRef,
     attributes: ColumnAttributes,
-    target_table_index: usize,
-    target_table_column_index: usize,
+    target_table_number: usize,
+    target_table_column_number: usize,
 ) -> anyhow::Result<Box<dyn Column>> {
     Ok(Box::new(BacklinkColumn::new(
         realm,
@@ -131,8 +131,8 @@ pub fn create_backlink_column(
         attributes,
         None,
         BacklinkContext {
-            target_table_index,
-            target_table_column_index,
+            target_table_number,
+            target_table_column_number,
         },
     )?))
 }
