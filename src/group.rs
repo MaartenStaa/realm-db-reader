@@ -14,7 +14,7 @@ use crate::traits::ArrayLike;
 /// can then be used to access tables.
 ///
 /// ```no_run
-/// use realm_rust::{Realm, Group};
+/// use realm_db_reader::{Realm, Group};
 ///
 /// let realm = Realm::open("example.realm").unwrap();
 /// let group = realm.into_group().unwrap();

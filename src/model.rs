@@ -20,7 +20,7 @@ macro_rules! realm_model_field {
 /// of your own struct instances, based on data retrieved from a Realm database.
 ///
 /// ```rust
-/// use realm_rust::realm_model;
+/// use realm_db_reader::realm_model;
 ///
 /// struct MyStruct {
 ///     field1: String,
@@ -51,7 +51,7 @@ macro_rules! realm_model_field {
 /// specify an alias:
 ///
 /// ```rust
-/// use realm_rust::realm_model;
+/// use realm_db_reader::realm_model;
 ///
 /// struct MyStruct {
 ///     my_struct_field: String,
@@ -68,7 +68,7 @@ macro_rules! realm_model_field {
 /// field:
 ///
 /// ```rust
-/// use realm_rust::{realm_model, Backlink};
+/// use realm_db_reader::{realm_model, Backlink};
 ///
 /// struct MyStruct {
 ///     field1: String,
@@ -89,7 +89,7 @@ macro_rules! realm_model_field {
 /// data too:
 ///
 /// ```rust
-/// use realm_rust::realm_model;
+/// use realm_db_reader::realm_model;
 ///
 /// struct MyStruct {
 ///     id: String,

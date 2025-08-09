@@ -11,7 +11,7 @@
 //! # Loading a Realm file
 //!
 //! ```no_run
-//! use realm_rust::{Group, Realm};
+//! use realm_db_reader::{Group, Realm};
 //!
 //! let realm = Realm::open("my-database.realm").unwrap();
 //! let group = realm.into_group().unwrap();
@@ -23,7 +23,7 @@
 //! # Reading data from tables
 //!
 //! ```no_run
-//! # use realm_rust::{Group, Realm};
+//! # use realm_db_reader::{Group, Realm};
 //! # let realm = Realm::open("my-database.realm").unwrap();
 //! # let group = realm.into_group().unwrap();
 //! # let my_objects_table_index = 0;
@@ -46,7 +46,7 @@
 //! you can find a row by a known value:
 //!
 //! ```no_run
-//! # use realm_rust::{Group, Realm};
+//! # use realm_db_reader::{Group, Realm};
 //! # let realm = Realm::open("my-database.realm").unwrap();
 //! # let group = realm.into_group().unwrap();
 //! # let some_id = "";
@@ -65,7 +65,7 @@
 //! struct for convenience. You can use the [`realm_model`] macro for this.
 //!
 //! ```no_run
-//! # use realm_rust::{realm_model, Group, Realm};
+//! # use realm_db_reader::{realm_model, Group, Realm};
 //! # let realm = Realm::open("my-database.realm").unwrap();
 //! # let group = realm.into_group().unwrap();
 //! # let table = group.get_table(0).unwrap();

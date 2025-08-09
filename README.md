@@ -2,7 +2,7 @@
 
 This is a Rust library that provides basic functionality for reading data from a
 Realm database. For usage and examples, please check the
-[documentation](https://docs.rs/realm-rust/latest/realm_rust/).
+[documentation](https://docs.rs/realm-db-reader/).
 
 ## Supported
 
