@@ -6,21 +6,21 @@ on:
       - "v*.*.*" # This triggers the action for tags like v1.0.0
 
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
-    needs:
-      - test
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-          override-file: rust-toolchain
+      - name: Build
+        run: cargo build --release
+
+      - name: Run Tests
+        run: cargo test --release
+
+      - name: Verify Formatting
+        run: cargo fmt --check
 
       - name: Publish
         run: cargo publish --token ${{ secrets.CRATES_IO_TOKEN }}

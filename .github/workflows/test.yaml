@@ -11,14 +11,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-          override-file: rust-toolchain
+        uses: actions/checkout@v4
 
       - name: Build
         run: cargo build --release
