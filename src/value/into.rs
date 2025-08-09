@@ -62,10 +62,13 @@ value_try_into!(Option<String>, String);
 value_try_into!(i64, Int);
 value_try_into!(Option<i64>, Int);
 value_try_into!(bool, Bool);
+value_try_into!(f32, Float);
+value_try_into!(f64, Double);
 value_try_into!(DateTime<Utc>, Timestamp);
 value_try_into!(Option<DateTime<Utc>>, Timestamp);
 value_try_into!(Backlink, BackLink);
 value_try_into!(Link, Link);
+value_try_into!(Option<Link>, Link);
 
 impl<'a, T> TryFrom<Value> for Vec<T>
 where
