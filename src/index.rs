@@ -66,7 +66,6 @@ impl Index {
                 return Ok(None);
             }
 
-            // assert!(pos <= self.components.len());
             assert!(pos < current_index.array.node.header.size as usize);
 
             let pos_refs = pos + 1;

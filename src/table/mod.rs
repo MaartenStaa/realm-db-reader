@@ -161,10 +161,7 @@ impl Table {
             return Ok(None);
         };
 
-        let row = self.get_row(row_number)?;
-        }
-
-        Ok(Some(row))
+        self.get_row(row_number).map(Some)
     }
 
     /// Get all rows in the table.
