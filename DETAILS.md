@@ -236,34 +236,3 @@ impl SmallBlobArray {
     }
 }
 ```
-
-## Observed in `realm-core`
-
-The top-ref points to a `Group` node, which has as its first field `m_table_names`, of type `ArrayStringShort`.
-
-To initialize it:
-
-1. `Group` calls `m_table_names.init_from_parent()`
-   1. (Previously, `Group::init_from_parent()` calls `m_table_names.set_parent(&m_top, 0)`. `m_top` is the `Array` for the `Group` node.)
-2. `ArrayStringShort` does not override `init_from_parent()`, so it calls `Array::init_from_parent()`
-3. `Array::init_from_parent()`:
-   1. Calls `get_ref_from_parent()`
-      1. `Node::get_ref_from_parent()` calls `m_parent.get_child_ref(m_ndx_in_parent)`
-      2. Here, `m_parent` is the `Group` node, and `m_ndx_in_parent` is 0.
-      3. `m_parent` is an `Array`, so it calls `Array::get_child_ref(0)`
-         1. `Array::get_child_ref(0)` calls `get_as_ref(0)`
-         2. `get_as_ref` calls `get_ref(0)`
-         3. It then calls `to_ref(value)`
-         4. `to_ref` asserts that `value` is divisible by 8
-         5. It then returns `ref_type(value)`
-         6. `ref_type` is an alias for `size_t`, i.e. `usize` in Rust
-   2. Then calls `init_from_ref(ref_from_parent_result)`
-   3. `init_from_ref` gets the pointer to the header by using `m_alloc.translate(ref)`.
-      1. The `translate` does some pretty funky stuff. It has an `m_ref_translation_ptr`, and when set it goes into `translate_critical()`.
-         1. (If that pointer isn't set, regular `Alloc` just returns the pointer, reinterpreted to a `char*`. `AllocSlab` asserts that path as unreachable.)
-      2. The `translate_critical`:
-         1. Gets the section index of the ref (`ref >> 26`; 64MB chunks)
-         2. Indexes into the translation pointer by the section index
-         3. ... And a whole bunch of other stuff, I don't think we need to worry about it?
-   4. So if we get the `ref` back, which really is just the same value from `Array::get`, then we can call `Array::init_from_mem`, which just initializes the `NodeHeader`, and caches some values from it, like the width.
-
