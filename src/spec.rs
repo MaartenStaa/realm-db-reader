@@ -1,5 +1,6 @@
 use crate::array::FromU64;
 
+/// The type of value contained in a column of a Realm table.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 #[allow(unused)]

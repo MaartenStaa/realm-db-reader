@@ -13,6 +13,7 @@ pub use crate::table::header::TableHeader;
 pub use crate::table::row::Row;
 use crate::value::Value;
 
+/// A view into a single Realm database table.
 #[derive(Debug)]
 #[allow(unused)]
 pub struct Table {
@@ -21,6 +22,7 @@ pub struct Table {
 }
 
 impl Table {
+    /// Construct a new table instance, from the given Realm array.
     #[instrument(target = "Table", level = "debug")]
     pub fn build(array: Array, table_number: usize) -> anyhow::Result<Self> {
         let header_array = array.get_node(0)?.unwrap();
@@ -29,6 +31,9 @@ impl Table {
         Self::build_from(&header_array, data_array, table_number)
     }
 
+    /// Construct a new table instance, from the given Realm arrays for the
+    /// header and data. This is used primarily by subtables, as their header
+    /// and data arrays are in disjointed locations compared to regular tables.
     #[instrument(target = "Table", level = "debug")]
     pub(crate) fn build_from(
         header_array: &Array,
@@ -48,20 +53,37 @@ impl Table {
 }
 
 impl Table {
+    /// Get the number of the table, starting with 0, within the
+    /// [`Group`](`crate::group::Group`).
+    ///
+    /// Subtables have a table number of [`usize::MAX`].
     pub fn get_table_number(&self) -> usize {
         self.table_number
     }
 
-    pub fn get_column_spec(&self, column_number: usize) -> anyhow::Result<&dyn Column> {
+    /// Get the column specifications for the table.
+    pub fn get_column_specs(&self) -> &[Box<dyn Column>] {
+        self.header.get_columns()
+    }
+
+    /// Get the specification for the column with the given number (starting with 0).
+    ///
+    /// Returns an error if the column number is out of range.
+    pub fn get_column_spec(&self, column_number: usize) -> Option<&dyn Column> {
         self.header.get_column(column_number)
     }
 
+    /// Get the number of rows in the table.
     #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
     pub fn row_count(&self) -> anyhow::Result<usize> {
-        let first_column = self.header.get_column(0)?;
+        let first_column = self
+            .header
+            .get_column(0)
+            .ok_or_else(|| anyhow::anyhow!("No column at index 0: can't load row count"))?;
         first_column.count()
     }
 
+    /// Get the row with the given number (starting with 0).
     #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
     pub fn get_row<'a>(&'a self, row_number: usize) -> anyhow::Result<Row<'a>> {
         let values = self.load_row(row_number)?;
@@ -77,6 +99,7 @@ impl Table {
         ))
     }
 
+    /// Load the values for the row with the given number (starting with 0).
     #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
     fn load_row(&self, row_number: usize) -> anyhow::Result<Vec<Value>> {
         let column_count = self.header.column_count();
@@ -89,6 +112,13 @@ impl Table {
         Ok(values)
     }
 
+    /// Determine the row number for the given value in an indexed column.
+    /// Note that if there are multiple rows with the same value, this function
+    /// will return the first one.
+    ///
+    /// Returns an error if there is no column with the given name or if the column is not indexed.
+    ///
+    /// Returns `None` if the value is not found in the indexed column.
     #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
     pub fn find_row_number_from_indexed_column(
         &self,
@@ -113,6 +143,12 @@ impl Table {
         column_spec.get_row_number_by_index(value)
     }
 
+    /// Find and load the row with the given value in an indexed column.
+    /// Note that if there are multiple rows with the same value, only the first one is returned.
+    ///
+    /// Returns an error if there is no column with the given name or if the column is not indexed.
+    ///
+    /// Returns `None` if the value is not found in the indexed column.
     #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
     pub fn find_row_from_indexed_column<'a>(
         &'a self,
@@ -127,6 +163,7 @@ impl Table {
         Ok(None)
     }
 
+    /// Get all rows in the table.
     #[instrument(target = "Table", level = "debug", skip(self), fields(header = ?self.header))]
     pub fn get_rows<'a>(&'a self) -> anyhow::Result<Vec<Row<'a>>> {
         let row_count = self.row_count()?;
@@ -139,9 +176,15 @@ impl Table {
         Ok(rows)
     }
 
+    /// Load the value at the specified column and row.
+    ///
+    /// Panics if the column or row number is out of range.
     #[instrument(target = "Table", level = "debug", skip(self))]
     fn load_column(&self, column_number: usize, row_number: usize) -> anyhow::Result<Value> {
-        let column_spec = self.header.get_column(column_number)?;
+        let column_spec = self
+            .header
+            .get_column(column_number)
+            .unwrap_or_else(|| panic!("Invalid column number {column_number}"));
         let value = column_spec.get(row_number)?;
 
         debug!(

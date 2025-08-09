@@ -16,6 +16,9 @@ use crate::spec::ColumnType;
 use crate::table::column::ColumnAttributes;
 use crate::traits::ArrayLike;
 
+/// The header of a table.
+///
+/// The header contains information about the columns in a table, such as their names, types, and attributes.
 #[derive(Debug)]
 pub struct TableHeader {
     columns: Vec<Box<dyn Column>>,

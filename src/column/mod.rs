@@ -40,16 +40,20 @@ pub trait Column: Debug + Send {
     /// Get the value for this column for the row with the given index.
     fn get(&self, index: usize) -> anyhow::Result<Value>;
 
-    /// Check whether the value at the given index is null.
+    /// Check whether the value at the given index is null. Note that some
+    /// column types are never null, see [`Value`] for details.
     fn is_null(&self, index: usize) -> anyhow::Result<bool>;
 
     /// Get the total number of values in this column.
     fn count(&self) -> anyhow::Result<usize>;
 
-    /// Get whether this column is nullable.
+    /// Get whether this column is nullable. Note that some column types are
+    /// never null, see [`Value`] for details.
     fn nullable(&self) -> bool;
 
-    /// Is table indexed?
+    /// Is this column indexed? If so, you can use
+    /// [`table.find_row_from_indexed_column`](crate::Table::find_row_from_indexed_column)
+    /// to find rows by a known value based on this column.
     fn is_indexed(&self) -> bool;
 
     /// Look up a value for this column in the index.
@@ -57,7 +61,7 @@ pub trait Column: Debug + Send {
     /// Panics if this column is not indexed.
     fn get_row_number_by_index(&self, lookup_value: &Value) -> anyhow::Result<Option<usize>>;
 
-    /// Get the name of this column.
+    /// Get the name of this column. All columns except backlinks are named.
     fn name(&self) -> Option<&str>;
 }
 

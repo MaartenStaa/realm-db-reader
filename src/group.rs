@@ -5,6 +5,23 @@ use crate::array::{Array, ArrayStringShort};
 use crate::table::Table;
 use crate::traits::ArrayLike;
 
+/// The group is the central root of a Realm database. It contains all the
+/// tables and their names.
+///
+/// The main way to interact with the Realm database, is by opening the
+/// [`Realm`](crate::Realm::open), and calling
+/// [`realm.into_group`][`crate::Realm::into_group`]. The resulting [`Group`]
+/// can then be used to access tables.
+///
+/// ```no_run
+/// use realm_rust::{Realm, Group};
+///
+/// let realm = Realm::open("example.realm").unwrap();
+/// let group = realm.into_group().unwrap();
+///
+/// let table = group.get_table(0).unwrap();
+/// let row = table.get_row(0).unwrap();
+/// ```
 #[derive(Debug)]
 pub struct Group {
     tables_array: Array,
@@ -29,6 +46,9 @@ impl Group {
 }
 
 impl Group {
+    /// Get the [`Table`] with the given number (starting from 0).
+    ///
+    /// Panics if the table number is out of bounds.
     #[instrument(target = "Group", level = "debug", skip(self), fields(table_names = ?self.table_names))]
     pub fn get_table(&self, table_number: usize) -> anyhow::Result<Table> {
         let table_array = self.tables_array.get_node(table_number)?.unwrap();
@@ -38,6 +58,9 @@ impl Group {
         Ok(table)
     }
 
+    /// Get the [`Table`] with the given name.
+    ///
+    /// Panics if the table name is not found.
     #[instrument(target = "Group", level = "debug", skip(self), fields(table_names = ?self.table_names))]
     pub fn get_table_by_name(&self, name: &str) -> anyhow::Result<Table> {
         let table_number = self
@@ -49,14 +72,19 @@ impl Group {
         self.get_table(table_number)
     }
 
+    /// Get the number of tables in the group.
     pub fn table_count(&self) -> usize {
         self.table_names.len()
     }
 
+    /// Get the name of the table at the given index.
+    ///
+    /// Panics if the index is out of bounds.
     pub fn get_table_name(&self, index: usize) -> &str {
         &self.table_names[index]
     }
 
+    /// Get the names of all tables in the group.
     pub fn get_table_names(&self) -> &[String] {
         &self.table_names
     }

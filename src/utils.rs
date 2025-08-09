@@ -4,7 +4,9 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use crate::{array::RealmRef, realm::Realm};
 
-pub fn read_array_value(payload: &[u8], width: u8, index: usize) -> u64 {
+/// Read a value from a Realm node payload. The width here corresponds to the
+/// width value read from the Realm node header.
+pub(crate) fn read_array_value(payload: &[u8], width: u8, index: usize) -> u64 {
     match width {
         0 => 0,
         1 => {
@@ -64,6 +66,8 @@ fn find_child_from_offsets(
     Ok((child_index, index_in_child))
 }
 
+/// For a B+Tree node, calculate the child index and index within that child
+/// node for the given element index.
 fn find_bptree_child(
     realm: Arc<Realm>,
     first_value: u64,
@@ -88,7 +92,7 @@ fn find_bptree_child(
     Ok((child_index, index_in_child))
 }
 
-pub fn find_bptree_child_in_payload(
+pub(crate) fn find_bptree_child_in_payload(
     realm: Arc<Realm>,
     payload: &[u8],
     width: u8,
@@ -101,7 +105,7 @@ pub fn find_bptree_child_in_payload(
 }
 
 /// Converts a byte vector to a string, assuming it is null-terminated.
-pub fn string_from_bytes(mut bytes: Vec<u8>) -> String {
+pub(crate) fn string_from_bytes(mut bytes: Vec<u8>) -> String {
     assert!(
         !bytes.is_empty(),
         "string cannot be empty (should have a trailing \\0"
@@ -116,29 +120,30 @@ pub fn string_from_bytes(mut bytes: Vec<u8>) -> String {
     unsafe { String::from_utf8_unchecked(bytes) }
 }
 
-// Lower/upper bound in sorted sequence
-// ------------------------------------
-//
-//   3 3 3 4 4 4 5 6 7 9 9 9
-//   ^     ^     ^     ^     ^
-//   |     |     |     |     |
-//   |     |     |     |      -- Lower and upper bound of 15
-//   |     |     |     |
-//   |     |     |      -- Lower and upper bound of 8
-//   |     |     |
-//   |     |      -- Upper bound of 4
-//   |     |
-//   |      -- Lower bound of 4
-//   |
-//    -- Lower and upper bound of 1
-//
-// These functions are semantically identical to std::lower_bound() and
-// std::upper_bound().
-//
-// We currently use binary search. See for example
-// http://www.tbray.org/ongoing/When/200x/2003/03/22/Binary.
+/// Lower/upper bound in sorted sequence
+///
+/// ```ignore
+///   3 3 3 4 4 4 5 6 7 9 9 9
+///   ^     ^     ^     ^     ^
+///   |     |     |     |     |
+///   |     |     |     |      -- Lower and upper bound of 15
+///   |     |     |     |
+///   |     |     |      -- Lower and upper bound of 8
+///   |     |     |
+///   |     |      -- Upper bound of 4
+///   |     |
+///   |      -- Lower bound of 4
+///   |
+///    -- Lower and upper bound of 1
+/// ```
+///
+/// These functions are semantically identical to std::lower_bound() and
+/// std::upper_bound() in C++.
+///
+/// We currently use binary search. See for example
+/// http://www.tbray.org/ongoing/When/200x/2003/03/22/Binary.
 #[inline]
-pub fn lower_bound(data: &[u8], width: u8, mut size: usize, value: u64) -> usize {
+pub(crate) fn lower_bound(data: &[u8], width: u8, mut size: usize, value: u64) -> usize {
     // The binary search used here is carefully optimized. Key trick is to use a single
     // loop controlling variable (size) instead of high/low pair, and to keep updates
     // to size done inside the loop independent of comparisons. Further key to speed
@@ -221,7 +226,7 @@ pub fn lower_bound(data: &[u8], width: u8, mut size: usize, value: u64) -> usize
     low
 }
 
-// See lower_bound()
+/// See [`lower_bound`].
 #[inline]
 fn upper_bound(data: &[u8], width: u8, mut size: usize, value: u64) -> usize {
     let mut low = 0;

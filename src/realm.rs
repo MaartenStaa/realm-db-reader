@@ -6,9 +6,9 @@ use byteorder::{ByteOrder, LittleEndian};
 use memmap2::Mmap;
 use tracing::instrument;
 
+use crate::Group;
 use crate::array::{Array, RealmRef};
 use crate::traits::Node;
-use crate::utils::read_array_value;
 
 #[derive(Clone, Copy)]
 pub(crate) struct Header {
@@ -185,6 +185,7 @@ pub(crate) fn decode_slot(buf: &[u8], width: u8, index: usize) -> SlotValue {
     } // LSB clear ⇒ ref
 }
 
+/// A reference to a Realm database.
 pub struct Realm {
     mmap: Mmap,
     pub(crate) hdr: Header,
@@ -197,6 +198,12 @@ impl Debug for Realm {
 }
 
 impl Realm {
+    /// Open a Realm database.
+    ///
+    /// Returns an error if:
+    /// - The header is invalid.
+    /// - The file is encrypted.
+    /// - The file format version is not supported.
     #[instrument(target = "Realm", level = "debug")]
     pub fn open(path: impl AsRef<Path> + Debug) -> anyhow::Result<Self> {
         let file = std::fs::File::open(path)?;
@@ -240,11 +247,14 @@ impl Realm {
         self.hdr.current_top_ref()
     }
 
-    pub fn into_top_ref_array(self) -> anyhow::Result<Array> {
+    /// Create a reference to the [`Group`] in this Realm database. The
+    /// [`Group`] is the main entrypoint for interacting with the tables.
+    pub fn into_group(self) -> anyhow::Result<Group> {
         let ref_ = self.top_ref();
-        let array = Array::from_ref(Arc::new(self), ref_)?;
+        let realm = Arc::new(self);
+        let array = Array::from_ref(Arc::clone(&realm), ref_)?;
 
-        Ok(array)
+        Group::build(array)
     }
 }
 

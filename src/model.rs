@@ -1,3 +1,4 @@
+#[doc(hidden)]
 #[macro_export]
 macro_rules! realm_model_field {
     ($struct:ident, $row:ident, $field:ident = $alias:expr) => {
@@ -29,17 +30,25 @@ macro_rules! realm_model_field {
 /// realm_model!(MyStruct => field1, field2);
 /// ```
 ///
-/// You may only use types that either are valid Realm values, or can themselves be converted from
-/// Realm values. The builtin types are:
+/// You may only use types that either are valid Realm values, or can themselves
+/// be converted from Realm values. The builtin types are:
+///
 /// - `String` and `Option<String>`
 /// - `i64` and `Option<i64>`
 /// - `bool` and `Option<bool>`
+/// - `f32`
+/// - `f64`
 /// - `chrono::DateTime<Utc>` and `Option<chrono::DateTime<Utc>>`
+/// - [`Link`](crate::Link), `Option<Link>`, and `Vec<Link>`
 ///
-/// All struct fields must be present, but you may omit row columns that you don't need. The types
-/// of the fields in your struct should, of course, match the types of the Realm table columns.
+/// All struct fields must be present, but you may omit columns that you don't
+/// need. The types of the fields in your struct should, of course, match the
+/// types of the Realm table columns.
 ///
-/// If you want to name a field differently, you can use the `=` syntax to specify an alias:
+/// # Renaming fields
+///
+/// If you want to name a field differently, you can use the `=` syntax to
+/// specify an alias:
 ///
 /// ```rust
 /// use realm_rust::realm_model;
@@ -52,12 +61,14 @@ macro_rules! realm_model_field {
 /// realm_model!(MyStruct => my_struct_field, my_other_struct_field = "realmColumnName");
 /// ```
 ///
-/// Finally, some tables in Realm can be linked to each other using backlinks. To define a backlink,
-/// you can use the `;` syntax to specify the name of your backlink field:
+/// # Backlinks
+///
+/// Some tables in Realm can be linked to each other using backlinks. To define
+/// a backlink, you can use the `;` syntax to specify the name of your backlink
+/// field:
 ///
 /// ```rust
-/// use realm_rust::realm_model;
-/// use realm_rust::value::Backlink;
+/// use realm_rust::{realm_model, Backlink};
 ///
 /// struct MyStruct {
 ///     field1: String,
@@ -68,11 +79,14 @@ macro_rules! realm_model_field {
 /// realm_model!(MyStruct => field1, field2; backlink_field);
 /// ```
 ///
-/// This will create a backlink field in the struct that can be used to retrieve all rows that link
-/// to the current row. Backlink fields are unnamed in Realm, which is why they don't follow the same
-/// conventions as other fields.
+/// This will create a backlink field in the struct that can be used to retrieve
+/// all rows that link to the current row. Backlink fields are unnamed in Realm,
+/// which is why they don't follow the same conventions as other fields.
 ///
-/// In the case where the Realm table contains a subtable, you can refer to this data too:
+/// # Subtables
+///
+/// In the case where the Realm table contains a subtable, you can refer to this
+/// data too:
 ///
 /// ```rust
 /// use realm_rust::realm_model;
@@ -92,16 +106,17 @@ macro_rules! realm_model_field {
 ///     subtable_row_content: String,
 /// }
 ///
-/// // The aliases are not required here, it's just to illustrate they're available in subtables too.
+/// // The aliases are not required here, it's just to illustrate they're
+/// // available in subtables too.
 /// realm_model!(Item => subtable_row_id = "id", subtable_row_content = "content");
 /// ```
 #[macro_export]
 macro_rules! realm_model {
     ($struct:ident => $($field:ident$(= $alias:expr)?),*$(; $backlinks:ident)?) => {
-        impl<'a> ::core::convert::TryFrom<$crate::table::Row<'a>> for $struct {
+        impl<'a> ::core::convert::TryFrom<$crate::Row<'a>> for $struct {
             type Error = ::anyhow::Error;
 
-            fn try_from(mut row: $crate::table::Row<'a>) -> ::anyhow::Result<Self> {
+            fn try_from(mut row: $crate::Row<'a>) -> ::anyhow::Result<Self> {
                 $(
                 let $field = $crate::realm_model_field!($struct, row, $field$(= $alias)?);
                 )*
@@ -124,9 +139,8 @@ macro_rules! realm_model {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::table::Row;
-    use crate::value::{ARRAY_VALUE_KEY, Backlink, Value};
+    use crate::value::ARRAY_VALUE_KEY;
+    use crate::{Backlink, Link, Row, Value};
     use itertools::*;
 
     #[test]
@@ -220,17 +234,24 @@ mod tests {
     }
 
     #[test]
-    fn test_model_with_backlinks() {
+    fn test_model_with_links() {
         struct MyModel {
             id: String,
+            link_a: Link,
+            // FIXME: This is not supported yet
+            // link_b: Vec<Link>,
+            optional_link: Option<Link>,
             backlinks: Vec<Backlink>,
         }
 
-        realm_model!(MyModel => id; backlinks);
+        realm_model!(MyModel => id, link_a, optional_link; backlinks);
 
         let values = vec![
             "123456789".into(),
             "irrelevant_field".into(),
+            Link::new(12, 5).into(),
+            vec![Link::new(13, 6)].into(),
+            Value::None,
             Backlink::new(12, 5, vec![1989]).into(),
         ];
         let row = Row::new(
@@ -238,6 +259,9 @@ mod tests {
             vec![
                 "id".into(),
                 "other_field".into(),
+                "link_a".into(),
+                "link_b".into(),
+                "optional_link".into(),
                 // NOTE: backlinks are unnamed
             ],
         );
@@ -245,5 +269,7 @@ mod tests {
         let model: MyModel = row.try_into().unwrap();
         assert_eq!(model.id, "123456789");
         assert_eq!(model.backlinks, vec![Backlink::new(12, 5, vec![1989])]);
+        assert_eq!(model.link_a, Link::new(12, 5));
+        assert_eq!(model.optional_link, None);
     }
 }
