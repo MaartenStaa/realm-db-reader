@@ -119,7 +119,6 @@ impl TableHeader {
                         .ok_or(anyhow::anyhow!("Expected sub-spec array for table column"))?
                         .get_ref(sub_spec_index)
                         .unwrap();
-                    sub_spec_index += 1;
                     let name = column_names.pop().unwrap();
 
                     create_subtable_column(
@@ -159,7 +158,6 @@ impl TableHeader {
                             .ok_or(anyhow::anyhow!("Expected sub-spec array for link column"))?,
                         sub_spec_index,
                     )?;
-                    sub_spec_index += 1;
 
                     create_link_column(
                         Arc::clone(&data_array.node.realm),
@@ -176,7 +174,6 @@ impl TableHeader {
                             .ok_or(anyhow::anyhow!("Expected sub-spec array for link column"))?,
                         sub_spec_index,
                     )?;
-                    sub_spec_index += 1;
 
                     create_linklist_column(
                         Arc::clone(&data_array.node.realm),
@@ -192,10 +189,8 @@ impl TableHeader {
                     ))?;
                     let target_table_index =
                         Self::get_sub_spec_index_value(sub_spec_array, sub_spec_index)?;
-                    sub_spec_index += 1;
                     let target_table_column_index =
-                        Self::get_sub_spec_index_value(sub_spec_array, sub_spec_index)?;
-                    sub_spec_index += 1;
+                        Self::get_sub_spec_index_value(sub_spec_array, sub_spec_index + 1)?;
                     create_backlink_column(
                         Arc::clone(&data_array.node.realm),
                         data_ref,
@@ -216,6 +211,10 @@ impl TableHeader {
                 // index. In other words, for column with data index N, with attribute is_indexed,
                 // there's an index entry at N+1 in the data array.
                 data_array_index += 1;
+            }
+
+            if column_type.has_sub_spec() {
+                sub_spec_index += column_type.sub_spec_entries_count();
             }
         }
 

@@ -155,12 +155,16 @@ impl Table {
         indexed_column_name: &str,
         value: &Value,
     ) -> anyhow::Result<Option<Row<'a>>> {
-        let row_number = self.find_row_number_from_indexed_column(indexed_column_name, value)?;
-        if let Some(row_number) = row_number {
-            return Ok(Some(self.get_row(row_number)?));
+        let Some(row_number) =
+            self.find_row_number_from_indexed_column(indexed_column_name, value)?
+        else {
+            return Ok(None);
+        };
+
+        let row = self.get_row(row_number)?;
         }
 
-        Ok(None)
+        Ok(Some(row))
     }
 
     /// Get all rows in the table.
@@ -195,42 +199,4 @@ impl Table {
 
         Ok(value)
     }
-
-    // #[instrument(target = "Table", level = "debug", skip(self))]
-    // fn read_column_row_table(
-    //     &self,
-    //     data_array_index: usize,
-    //     table_header: &TableHeader,
-    //     name: &str,
-    //     attributes: &ColumnAttributes,
-    //     row_number: usize,
-    // ) -> anyhow::Result<Value> {
-    //     // let array: Array = match self.data_array.get_ref(data_array_index) {
-    //     //     Some(ref_) => Array::from_ref(self.data_array.node.realm.clone(), ref_)?,
-    //     //     _ => return Ok(Value::None),
-    //     // };
-    //     //
-    //     let Some(ref_) = self.data_array.get_ref(data_array_index) else {
-    //         return Ok(Value::None);
-    //     };
-    //
-    //     Ok(Value::Table(ref_))
-    //
-    //     // Ok(Value::Table(Table::new_for_subtable(
-    //     //     table_header.clone(),
-    //     //     array,
-    //     // )))
-    // }
-    //
-    // #[instrument(target = "Table", level = "debug", skip(self))]
-    // fn read_column_row_link(
-    //     &self,
-    //     data_array_index: usize,
-    //     target_table_number: usize,
-    //     name: &str,
-    //     attributes: &ColumnAttributes,
-    //     row_number: usize,
-    // ) -> anyhow::Result<Value> {
-    //     unimplemented!("link column {name} at index {data_array_index}");
-    // }
 }

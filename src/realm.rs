@@ -165,22 +165,6 @@ impl NodeHeader {
     }
 }
 
-/// --- helper: decode an elem_w-sized slot into Option<ref> -------------
-#[derive(Debug)]
-pub(crate) enum SlotValue {
-    Ref(u64),
-    Inline(u64),
-}
-
-pub(crate) fn decode_slot(buf: &[u8], width: u8, index: usize) -> SlotValue {
-    let v = read_array_value(buf, width, index);
-    if v & 1 == 0 {
-        SlotValue::Ref(v)
-    } else {
-        SlotValue::Inline(v >> 1)
-    } // LSB clear ⇒ ref
-}
-
 /// A reference to a Realm database.
 pub struct Realm {
     mmap: Mmap,
@@ -282,7 +266,6 @@ impl Debug for RealmNode {
 }
 
 impl Node for RealmNode {
-    // #[instrument(target = "RealmNode", level = "debug")]
     fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
         let header = realm.header(ref_)?;
         let cached_payload_len = header.payload_len();

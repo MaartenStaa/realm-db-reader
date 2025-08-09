@@ -85,7 +85,6 @@
 
 mod array;
 mod column;
-mod debug;
 mod group;
 mod index;
 mod model;
