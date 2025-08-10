@@ -2,8 +2,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use anyhow::{anyhow, bail};
-use log::{info, warn};
-use tracing::instrument;
+use tracing::{debug, info, instrument, warn};
 
 use crate::array::{Array, ArrayStringShort, FromU64, IntegerArray, RefOrTaggedValue};
 use crate::column::{
@@ -53,7 +52,7 @@ impl TableHeader {
                 .get_ref(data_array_index)
                 .ok_or_else(|| anyhow!("failed to find data entry for column {i}"))?;
 
-            log::debug!(
+            debug!(
                 "column type {i}: {column_type:?} has data array index {data_array_index} with ref {data_ref:?}"
             );
 
@@ -203,7 +202,7 @@ impl TableHeader {
                 }
             };
 
-            log::info!("Created column {column:?}");
+            tracing::info!("Created column {column:?}");
 
             columns.push(column);
 

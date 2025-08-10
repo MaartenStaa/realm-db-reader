@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::sync::Arc;
 
-use tracing::instrument;
+use tracing::{debug, info, instrument, warn};
 
 use crate::array::{Array, RealmRef, RefOrTaggedValue};
 use crate::realm::Realm;
@@ -42,11 +42,11 @@ impl Index {
         let mut value_offset: usize = 0;
         let mut key = Self::create_key(&value);
 
-        log::debug!("finding first occurrence of '{value:?}', key = {key:?}");
+        debug!("finding first occurrence of '{value:?}', key = {key:?}");
 
         let mut current_index = Cow::Borrowed(self);
         loop {
-            log::debug!(
+            debug!(
                 "current_index: {current_index:?}, value_offset = {value_offset}, key = {key:?}"
             );
 
@@ -57,11 +57,11 @@ impl Index {
                 current_index.offsets.node.header.size as usize,
                 key as u64,
             );
-            log::debug!("lower_bound: value = {value:?}, key = {key:?}, pos = {pos}");
+            debug!("lower_bound: value = {value:?}, key = {key:?}, pos = {pos}");
 
             // If key is outside range, we know there can be no match.
             if pos == current_index.offsets.node.header.size as usize {
-                log::info!("No match found for key = {key:?} in current_index");
+                info!("No match found for key = {key:?} in current_index");
 
                 return Ok(None);
             }
@@ -76,14 +76,14 @@ impl Index {
                 current_index =
                     Cow::Owned(Self::from_ref(Arc::clone(&self.array.node.realm), ref_)?);
 
-                log::info!("Going to sub-index at {ref_:?} (current was inner B+Tree)");
+                info!("Going to sub-index at {ref_:?} (current was inner B+Tree)");
 
                 continue;
             }
 
             let stored_key = current_index.offsets.get(pos) as KeyType;
             if stored_key != key {
-                log::warn!(
+                warn!(
                     "Key mismatch: stored_key = {stored_key:?}, expected key = {key:?} at pos = {pos}",
                 );
 
@@ -99,7 +99,7 @@ impl Index {
                     let is_sub_index = array.node.header.context_flag();
 
                     if !is_sub_index {
-                        log::info!(
+                        info!(
                             "Found row index at pos {pos}: {ref_:?}, value = {:?}",
                             value
                         );
@@ -110,7 +110,7 @@ impl Index {
                     current_index =
                         Cow::Owned(Self::from_ref(Arc::clone(&self.array.node.realm), ref_)?);
 
-                    log::info!("going to sub-index at {ref_:?}");
+                    info!("going to sub-index at {ref_:?}");
 
                     // Go to next key part of the string. If the offset exceeds the string length, the key will be 0
                     value_offset += Self::KEY_SIZE as usize;
@@ -168,7 +168,7 @@ impl Index {
             Value::Timestamp(dt) => {
                 let s = dt.timestamp() as u64;
                 let ns = dt.timestamp_subsec_nanos();
-                log::debug!("coercing timestamp {dt:?} to string, value = {s} . {ns}");
+                debug!("coercing timestamp {dt:?} to string, value = {s} . {ns}");
                 let mut str =
                     Vec::with_capacity(std::mem::size_of_val(&s) + std::mem::size_of_val(&ns));
                 str.extend_from_slice(&s.to_le_bytes());

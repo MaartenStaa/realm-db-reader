@@ -3,8 +3,7 @@ mod header;
 mod row;
 
 use anyhow::{Ok, anyhow, bail};
-use log::debug;
-use tracing::instrument;
+use tracing::{debug, instrument};
 
 use crate::array::Array;
 use crate::column::Column;
@@ -105,7 +104,7 @@ impl Table {
         let column_count = self.header.column_count();
         let mut values = Vec::with_capacity(column_count);
         for column_number in 0..column_count {
-            log::info!("loading column {column_number} for row {row_number}");
+            tracing::info!("loading column {column_number} for row {row_number}");
             values.push(self.load_column(column_number, row_number)?);
         }
 

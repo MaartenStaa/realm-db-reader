@@ -2,8 +2,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use anyhow::Ok;
-use log::warn;
-use tracing::instrument;
+use tracing::{instrument, warn};
 
 use crate::array::{Array, RealmRef};
 use crate::realm::{Realm, RealmNode};

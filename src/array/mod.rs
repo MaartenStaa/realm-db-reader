@@ -16,8 +16,7 @@ use std::fmt::Debug;
 use std::ops::Add;
 use std::sync::Arc;
 
-use log::debug;
-use tracing::instrument;
+use tracing::{debug, instrument};
 
 use crate::realm::{Realm, RealmNode};
 use crate::traits::Node;

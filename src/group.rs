@@ -1,5 +1,4 @@
-use log::warn;
-use tracing::instrument;
+use tracing::{instrument, warn};
 
 use crate::array::{Array, ArrayStringShort};
 use crate::table::Table;

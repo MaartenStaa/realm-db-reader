@@ -4,9 +4,8 @@ use std::sync::Arc;
 use crate::array::RealmRef;
 use crate::realm::{Realm, RealmNode};
 use crate::traits::{ArrayLike, Node, NodeWithContext};
-use log::debug;
 use std::str;
-use tracing::instrument;
+use tracing::{debug, instrument};
 
 #[derive(Debug, Clone)]
 pub(crate) struct ArrayStringShort {
