@@ -184,7 +184,7 @@ impl Realm {
     /// - The header is invalid.
     /// - The file is encrypted.
     /// - The file format version is not supported.
-    #[instrument(target = "Realm", level = "debug")]
+    #[instrument(level = "debug")]
     pub fn open(path: impl AsRef<Path> + Debug) -> anyhow::Result<Self> {
         let file = std::fs::File::open(path)?;
         let mmap = unsafe { Mmap::map(&file)? };

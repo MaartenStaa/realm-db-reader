@@ -25,7 +25,7 @@ impl NodeWithContext<()> for ArrayStringShort {
 }
 
 impl ArrayLike<Option<String>> for ArrayStringShort {
-    #[instrument(target = "ArrayStringShort", level = "debug")]
+    #[instrument(level = "debug")]
     fn get(&self, index: usize) -> anyhow::Result<Option<String>> {
         Ok(Self::get_static(&self.node, index).map(|s| s.to_string()))
     }
@@ -87,11 +87,11 @@ impl ArrayLike<String> for ArrayStringShort {
 }
 
 impl ArrayStringShort {
-    #[instrument(target = "ArrayStringShort", level = "debug")]
+    #[instrument(level = "debug")]
     fn get_static(node: &RealmNode, index: usize) -> Option<&str> {
         let width = node.header.width() as usize;
         if width == 0 {
-            debug!(target: "ArrayStringShort", "get: width is 0, returning None");
+            debug!("get: width is 0, returning None");
             return None;
         }
 
@@ -102,7 +102,6 @@ impl ArrayStringShort {
         }
 
         debug!(
-            target: "ArrayStringShort",
             "get: index={index} width={width} zeroes={zeroes} element_data=0x{}",
             hex::encode(element_data)
         );

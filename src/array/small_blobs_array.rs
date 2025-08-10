@@ -44,7 +44,7 @@ impl NodeWithContext<()> for SmallBlobsArray {
 }
 
 impl ArrayLike<Option<Vec<u8>>> for SmallBlobsArray {
-    #[instrument(target = "SmallBlobsArray", level = "debug")]
+    #[instrument(level = "debug")]
     fn get(&self, index: usize) -> anyhow::Result<Option<Vec<u8>>> {
         if let Some(null_array) = &self.null {
             let is_null = null_array.get(index);

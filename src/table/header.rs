@@ -25,7 +25,7 @@ pub(crate) struct TableHeader {
 }
 
 impl TableHeader {
-    #[instrument(target = "TableHeader", level = "debug")]
+    #[instrument(level = "debug")]
     fn from_parts(
         data_array: &Array,
         column_types: Vec<ColumnType>,
@@ -53,7 +53,9 @@ impl TableHeader {
                 .get_ref(data_array_index)
                 .ok_or_else(|| anyhow!("failed to find data entry for column {i}"))?;
 
-            log::debug!(target: "TableHeader", "column type {i}: {column_type:?} has data array index {data_array_index} with ref {data_ref:?}");
+            log::debug!(
+                "column type {i}: {column_type:?} has data array index {data_array_index} with ref {data_ref:?}"
+            );
 
             let index_ref = if attributes.is_indexed() {
                 Some(
@@ -201,7 +203,7 @@ impl TableHeader {
                 }
             };
 
-            log::info!(target: "TableHeader", "Created column {column:?}");
+            log::info!("Created column {column:?}");
 
             columns.push(column);
 
@@ -248,7 +250,7 @@ impl TableHeader {
 }
 
 impl TableHeader {
-    #[instrument(target = "TableHeader", level = "debug")]
+    #[instrument(level = "debug")]
     pub(crate) fn build(header_array: &Array, data_array: &Array) -> anyhow::Result<Self> {
         let column_types = {
             let array: IntegerArray = header_array.get_node(0)?.unwrap();
@@ -259,14 +261,14 @@ impl TableHeader {
                 .collect::<Vec<_>>()
         };
 
-        info!(target: "TableHeader", "column_types: {:?}", column_types);
+        info!("column_types: {:?}", column_types);
 
         let column_names = {
             let array: ArrayStringShort = header_array.get_node(1)?.unwrap();
             array.get_all()?
         };
 
-        info!(target: "TableHeader", "column_names: {:?}", column_names);
+        info!("column_names: {:?}", column_names);
 
         let column_attributes = {
             let array: IntegerArray = header_array.get_node(2)?.unwrap();
@@ -277,7 +279,7 @@ impl TableHeader {
                 .collect::<Vec<_>>()
         };
 
-        info!(target: "TableHeader", "column_attributes: {:?}", column_attributes);
+        info!("column_attributes: {:?}", column_attributes);
 
         let sub_spec_array = if header_array.node.header.size > 3 {
             header_array.get_node(3)?

@@ -44,12 +44,12 @@ where
 }
 
 impl ArrayLike<String> for ArrayString<String> {
-    #[instrument(target = "ArrayString", level = "debug")]
+    #[instrument(level = "debug")]
     fn get(&self, index: usize) -> anyhow::Result<String> {
         self.inner.get(index)
     }
 
-    #[instrument(target = "ArrayString", level = "debug")]
+    #[instrument(level = "debug")]
     fn get_direct(
         realm: Arc<Realm>,
         ref_: RealmRef,
@@ -75,12 +75,12 @@ impl ArrayLike<String> for ArrayString<String> {
 }
 
 impl ArrayLike<Option<String>> for ArrayString<Option<String>> {
-    #[instrument(target = "ArrayString", level = "debug")]
+    #[instrument(level = "debug")]
     fn get(&self, index: usize) -> anyhow::Result<Option<String>> {
         self.inner.get(index)
     }
 
-    #[instrument(target = "ArrayString", level = "debug")]
+    #[instrument(level = "debug")]
     fn get_direct(
         realm: Arc<Realm>,
         ref_: RealmRef,
@@ -111,7 +111,7 @@ where
     SmallBlobsArray: ArrayLike<T>,
     LongBlobsArray: ArrayLike<T>,
 {
-    #[instrument(target = "ArrayString", level = "debug")]
+    #[instrument(level = "debug")]
     pub(crate) fn get_inner(
         header: &NodeHeader,
         realm: Arc<Realm>,

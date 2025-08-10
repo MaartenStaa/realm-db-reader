@@ -29,7 +29,7 @@ pub struct Group {
 }
 
 impl Group {
-    #[instrument(target = "Group", level = "debug")]
+    #[instrument(level = "debug")]
     pub(crate) fn build(array: Array) -> anyhow::Result<Self> {
         let table_names = {
             let array: ArrayStringShort = array.get_node(0)?.unwrap();
@@ -49,7 +49,7 @@ impl Group {
     /// Get the [`Table`] with the given number (starting from 0).
     ///
     /// Panics if the table number is out of bounds.
-    #[instrument(target = "Group", level = "debug", skip(self), fields(table_names = ?self.table_names))]
+    #[instrument(level = "debug", skip(self), fields(table_names = ?self.table_names))]
     pub fn get_table(&self, table_number: usize) -> anyhow::Result<Table> {
         let table_array = self.tables_array.get_node(table_number)?.unwrap();
 
@@ -61,7 +61,7 @@ impl Group {
     /// Get the [`Table`] with the given name.
     ///
     /// Panics if the table name is not found.
-    #[instrument(target = "Group", level = "debug", skip(self), fields(table_names = ?self.table_names))]
+    #[instrument(level = "debug", skip(self), fields(table_names = ?self.table_names))]
     pub fn get_table_by_name(&self, name: &str) -> anyhow::Result<Table> {
         let table_number = self
             .table_names

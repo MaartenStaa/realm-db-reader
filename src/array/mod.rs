@@ -85,7 +85,7 @@ impl Node for Array {
 }
 
 impl Array {
-    #[instrument(target = "Array", level = "debug")]
+    #[instrument(level = "debug")]
     pub(crate) fn get(&self, index: usize) -> u64 {
         assert!(
             index < self.node.header.size as usize,
@@ -96,7 +96,7 @@ impl Array {
         self.get_direct(self.width, index)
     }
 
-    #[instrument(target = "Array", level = "debug")]
+    #[instrument(level = "debug")]
     pub(crate) fn get_ref(&self, index: usize) -> Option<RealmRef> {
         assert!(
             index < self.node.header.size as usize,
@@ -115,7 +115,7 @@ impl Array {
         Some(RealmRef(ref_ as usize))
     }
 
-    #[instrument(target = "Array", level = "debug")]
+    #[instrument(level = "debug")]
     pub(crate) fn get_ref_or_tagged_value(&self, index: usize) -> Option<RefOrTaggedValue> {
         assert!(
             index < self.node.header.size as usize,
@@ -132,7 +132,7 @@ impl Array {
         Some(RefOrTaggedValue::from_raw(value))
     }
 
-    #[instrument(target = "Array", level = "debug")]
+    #[instrument(level = "debug")]
     pub(crate) fn get_node<N>(&self, index: usize) -> anyhow::Result<Option<N>>
     where
         N: Node,
@@ -142,7 +142,6 @@ impl Array {
         };
 
         debug!(
-            target: "Array",
             "get_node: offset={ref_:?} payload=0x{}",
             hex::encode(self.node.payload())
         );
@@ -159,7 +158,7 @@ impl Array {
         read_array_value(self.node.payload(), self.width, size - 1)
     }
 
-    #[instrument(target = "Array", level = "debug")]
+    #[instrument(level = "debug")]
     fn get_direct(&self, width: u8, index: usize) -> u64 {
         read_array_value(self.node.payload(), self.width, index)
     }

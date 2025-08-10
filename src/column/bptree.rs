@@ -41,7 +41,7 @@ impl<T: ColumnType> NodeWithContext<T::LeafContext> for BpTree<T> {
 }
 
 impl<T: ColumnType> BpTree<T> {
-    #[instrument(target = "BpTree", level = "debug")]
+    #[instrument(level = "debug")]
     pub(crate) fn get(&self, index: usize) -> anyhow::Result<T::Value> {
         if self.root_is_leaf() {
             let leaf = T::LeafType::from_ref_with_context(
@@ -61,7 +61,7 @@ impl<T: ColumnType> BpTree<T> {
         )
     }
 
-    #[instrument(target = "BpTree", level = "debug")]
+    #[instrument(level = "debug")]
     pub(crate) fn is_null(&self, index: usize) -> anyhow::Result<bool> {
         if self.root_is_leaf() {
             let leaf = T::LeafType::from_ref_with_context(
@@ -83,7 +83,7 @@ impl<T: ColumnType> BpTree<T> {
         leaf.is_null(index_in_leaf)
     }
 
-    #[instrument(target = "BpTree", level = "debug")]
+    #[instrument(level = "debug")]
     pub(crate) fn count(&self) -> anyhow::Result<usize> {
         Ok(if self.root_is_leaf() {
             self.root_as_leaf()?.size()
@@ -94,12 +94,12 @@ impl<T: ColumnType> BpTree<T> {
 }
 
 impl<T: ColumnType> BpTree<T> {
-    #[instrument(target = "BpTree", level = "debug")]
+    #[instrument(level = "debug")]
     fn root_is_leaf(&self) -> bool {
         !self.root.node.header.is_inner_bptree()
     }
 
-    #[instrument(target = "BpTree", level = "debug")]
+    #[instrument(level = "debug")]
     fn root_as_leaf(&self) -> anyhow::Result<T::LeafType> {
         assert!(self.root_is_leaf(), "Root is not a leaf node");
 
@@ -110,7 +110,7 @@ impl<T: ColumnType> BpTree<T> {
         )
     }
 
-    #[instrument(target = "BpTree", level = "debug")]
+    #[instrument(level = "debug")]
     fn root_as_node<'a>(&'a self) -> BpTreeNode<'a> {
         assert!(!self.root_is_leaf(), "Root is not a B+Tree node");
 

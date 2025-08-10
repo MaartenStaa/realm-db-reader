@@ -42,7 +42,7 @@ pub(crate) struct SubtableArrayLeaf {
 }
 
 impl NodeWithContext<SubtableContext> for SubtableArrayLeaf {
-    #[instrument(target = "BpTree", level = "debug")]
+    #[instrument(level = "debug")]
     fn from_ref_with_context(
         realm: Arc<Realm>,
         ref_: RealmRef,

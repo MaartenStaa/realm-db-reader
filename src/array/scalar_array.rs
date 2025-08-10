@@ -29,7 +29,7 @@ impl NodeWithContext<()> for ScalarArray {
 macro_rules! impl_scalar_bytewise {
     ($scalar:ty) => {
         impl ArrayLike<$scalar> for ScalarArray {
-            #[instrument(target = "ScalarArray", level = "debug")]
+            #[instrument(level = "debug")]
             fn get(&self, index: usize) -> anyhow::Result<$scalar> {
                 assert!(
                     index < self.node.header.size as usize,

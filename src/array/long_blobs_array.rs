@@ -16,7 +16,7 @@ pub(crate) struct LongBlobsArray {
 }
 
 impl NodeWithContext<()> for LongBlobsArray {
-    #[instrument(target = "LongBlobsArray", level = "debug")]
+    #[instrument(level = "debug")]
     fn from_ref_with_context(realm: Arc<Realm>, ref_: RealmRef, _: ()) -> anyhow::Result<Self>
     where
         Self: Sized,
@@ -67,7 +67,7 @@ impl LongBlobsArray {
 }
 
 impl ArrayLike<Option<Vec<u8>>> for LongBlobsArray {
-    #[instrument(target = "LongBlobsArray", level = "debug")]
+    #[instrument(level = "debug")]
     fn get(&self, index: usize) -> anyhow::Result<Option<Vec<u8>>> {
         let Some(ref_) = self.array.get_ref(index) else {
             warn!("get: index={index} returned NULL");
