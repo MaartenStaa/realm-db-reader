@@ -92,7 +92,8 @@ impl<T: ColumnType> Debug for ColumnImpl<T> {
 impl<T: ColumnType + Send> Column for ColumnImpl<T>
 where
     Value: From<T::Value>,
-    <T as ColumnType>::LeafContext: std::marker::Send,
+    <T as ColumnType>::LeafContext: Send,
+    <T as ColumnType>::LeafType: Send,
 {
     fn get(&self, index: usize) -> anyhow::Result<Value> {
         Ok(Value::from(self.tree.get(index)?))

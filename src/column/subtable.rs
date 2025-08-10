@@ -52,11 +52,6 @@ impl NodeWithContext<SubtableContext> for SubtableArrayLeaf {
         Self: Sized,
     {
         let root = Array::from_ref(Arc::clone(&realm), ref_)?;
-        assert!(
-            !root.node.header.is_inner_bptree(),
-            "SubtableArrayLeaf must not be a B+Tree"
-        );
-
         let header_array = Array::from_ref(realm, context.header_ref)?;
 
         Ok(SubtableArrayLeaf { root, header_array })

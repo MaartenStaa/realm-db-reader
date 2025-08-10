@@ -11,6 +11,7 @@ use crate::utils;
 #[derive(Clone)]
 pub(crate) struct BpTree<T: ColumnType> {
     root: Array,
+    root_as_leaf: T::LeafType,
     context: T::LeafContext,
     column_type: PhantomData<T>,
 }
@@ -32,8 +33,13 @@ impl<T: ColumnType> NodeWithContext<T::LeafContext> for BpTree<T> {
     ) -> anyhow::Result<Self> {
         let root = Array::from_ref(realm, ref_)?;
 
+        // Pre-cache root as leaf
+        let root_as_leaf =
+            T::LeafType::from_ref_with_context(root.node.realm.clone(), root.node.ref_, context)?;
+
         Ok(Self {
             root,
+            root_as_leaf,
             column_type: PhantomData,
             context,
         })
@@ -44,12 +50,7 @@ impl<T: ColumnType> BpTree<T> {
     #[instrument(level = "debug")]
     pub(crate) fn get(&self, index: usize) -> anyhow::Result<T::Value> {
         if self.root_is_leaf() {
-            let leaf = T::LeafType::from_ref_with_context(
-                self.root.node.realm.clone(),
-                self.root.node.ref_,
-                self.context,
-            )?;
-            return leaf.get(index);
+            return self.root_as_leaf.get(index);
         }
 
         let (leaf_ref, index_in_leaf) = self.root_as_node().get_bptree_leaf(index)?;
@@ -86,7 +87,7 @@ impl<T: ColumnType> BpTree<T> {
     #[instrument(level = "debug")]
     pub(crate) fn count(&self) -> anyhow::Result<usize> {
         Ok(if self.root_is_leaf() {
-            self.root_as_leaf()?.size()
+            self.root_as_leaf.size()
         } else {
             self.root_as_node().get_bptree_size()
         })
@@ -97,17 +98,6 @@ impl<T: ColumnType> BpTree<T> {
     #[instrument(level = "debug")]
     fn root_is_leaf(&self) -> bool {
         !self.root.node.header.is_inner_bptree()
-    }
-
-    #[instrument(level = "debug")]
-    fn root_as_leaf(&self) -> anyhow::Result<T::LeafType> {
-        assert!(self.root_is_leaf(), "Root is not a leaf node");
-
-        T::LeafType::from_ref_with_context(
-            Arc::clone(&self.root.node.realm),
-            self.root.node.ref_,
-            self.context,
-        )
     }
 
     #[instrument(level = "debug")]
