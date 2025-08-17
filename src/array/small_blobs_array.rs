@@ -16,7 +16,7 @@ pub(crate) struct SmallBlobsArray {
 }
 
 impl NodeWithContext<()> for SmallBlobsArray {
-    fn from_ref_with_context(realm: Arc<Realm>, ref_: RealmRef, _: ()) -> anyhow::Result<Self>
+    fn from_ref_with_context(realm: Arc<Realm>, ref_: RealmRef, _: ()) -> crate::RealmResult<Self>
     where
         Self: Sized,
     {
@@ -44,7 +44,7 @@ impl NodeWithContext<()> for SmallBlobsArray {
 
 impl ArrayLike<Option<Vec<u8>>> for SmallBlobsArray {
     #[instrument(level = "debug")]
-    fn get(&self, index: usize) -> anyhow::Result<Option<Vec<u8>>> {
+    fn get(&self, index: usize) -> crate::RealmResult<Option<Vec<u8>>> {
         if let Some(null_array) = &self.null {
             let is_null = null_array.get(index);
             assert!(
@@ -82,13 +82,13 @@ impl ArrayLike<Option<Vec<u8>>> for SmallBlobsArray {
         ref_: RealmRef,
         index: usize,
         _: (),
-    ) -> anyhow::Result<Option<Vec<u8>>> {
+    ) -> crate::RealmResult<Option<Vec<u8>>> {
         // No real way to do this without basically reconstructing the constructor. Might as well just call that and use `get` to get the bytes.
         let array = SmallBlobsArray::from_ref(realm, ref_)?;
         array.get(index)
     }
 
-    fn is_null(&self, index: usize) -> anyhow::Result<bool> {
+    fn is_null(&self, index: usize) -> crate::RealmResult<bool> {
         if let Some(nulls) = &self.null {
             Ok(nulls.get(index) == 0)
         } else {
@@ -102,7 +102,7 @@ impl ArrayLike<Option<Vec<u8>>> for SmallBlobsArray {
 }
 
 impl ArrayLike<Option<String>> for SmallBlobsArray {
-    fn get(&self, index: usize) -> anyhow::Result<Option<String>> {
+    fn get(&self, index: usize) -> crate::RealmResult<Option<String>> {
         let bytes = <Self as ArrayLike<Option<Vec<u8>>>>::get(self, index)?;
 
         Ok(bytes.map(utils::string_from_bytes))
@@ -113,7 +113,7 @@ impl ArrayLike<Option<String>> for SmallBlobsArray {
         ref_: RealmRef,
         index: usize,
         context: (),
-    ) -> anyhow::Result<Option<String>>
+    ) -> crate::RealmResult<Option<String>>
     where
         Self: Sized,
     {
@@ -122,7 +122,7 @@ impl ArrayLike<Option<String>> for SmallBlobsArray {
         Ok(bytes.map(utils::string_from_bytes))
     }
 
-    fn is_null(&self, index: usize) -> anyhow::Result<bool> {
+    fn is_null(&self, index: usize) -> crate::RealmResult<bool> {
         if let Some(nulls) = &self.null {
             Ok(nulls.get(index) == 0)
         } else {
@@ -136,7 +136,7 @@ impl ArrayLike<Option<String>> for SmallBlobsArray {
 }
 
 impl ArrayLike<String> for SmallBlobsArray {
-    fn get(&self, index: usize) -> anyhow::Result<String> {
+    fn get(&self, index: usize) -> crate::RealmResult<String> {
         <Self as ArrayLike<Option<String>>>::get(self, index).map(|s| s.unwrap_or_default())
     }
 
@@ -145,7 +145,7 @@ impl ArrayLike<String> for SmallBlobsArray {
         ref_: RealmRef,
         index: usize,
         context: (),
-    ) -> anyhow::Result<String>
+    ) -> crate::RealmResult<String>
     where
         Self: Sized,
     {
@@ -153,7 +153,7 @@ impl ArrayLike<String> for SmallBlobsArray {
             .map(|s| s.unwrap_or_default())
     }
 
-    fn is_null(&self, index: usize) -> anyhow::Result<bool> {
+    fn is_null(&self, index: usize) -> crate::RealmResult<bool> {
         if let Some(nulls) = &self.null {
             Ok(nulls.get(index) == 0)
         } else {

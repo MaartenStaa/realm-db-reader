@@ -31,7 +31,7 @@ impl NodeWithContext<LinkListColumnContext> for LinkListLeaf {
         realm: Arc<Realm>,
         ref_: RealmRef,
         context: LinkListColumnContext,
-    ) -> anyhow::Result<Self>
+    ) -> crate::RealmResult<Self>
     where
         Self: Sized,
     {
@@ -41,7 +41,7 @@ impl NodeWithContext<LinkListColumnContext> for LinkListLeaf {
 }
 
 impl ArrayLike<Vec<Link>, LinkListColumnContext> for LinkListLeaf {
-    fn get(&self, index: usize) -> anyhow::Result<Vec<Link>> {
+    fn get(&self, index: usize) -> crate::RealmResult<Vec<Link>> {
         let sub_array = match self.root.get_ref_or_tagged_value(index) {
             Some(RefOrTaggedValue::Ref(ref_)) => {
                 Array::from_ref(Arc::clone(&self.root.node.realm), ref_)?
@@ -57,7 +57,7 @@ impl ArrayLike<Vec<Link>, LinkListColumnContext> for LinkListLeaf {
         ref_: RealmRef,
         index: usize,
         context: LinkListColumnContext,
-    ) -> anyhow::Result<Vec<Link>> {
+    ) -> crate::RealmResult<Vec<Link>> {
         let header = realm.header(ref_)?;
         let payload = realm.payload(ref_, header.payload_len());
 
@@ -72,7 +72,7 @@ impl ArrayLike<Vec<Link>, LinkListColumnContext> for LinkListLeaf {
         Ok(Self::get_from_sub_array(sub_array, context))
     }
 
-    fn is_null(&self, _: usize) -> anyhow::Result<bool> {
+    fn is_null(&self, _: usize) -> crate::RealmResult<bool> {
         Ok(false)
     }
 
@@ -100,7 +100,7 @@ pub(crate) fn create_linklist_column(
     attributes: ColumnAttributes,
     target_table_index: usize,
     name: String,
-) -> anyhow::Result<Box<dyn Column>> {
+) -> crate::RealmResult<Box<dyn Column>> {
     Ok(Box::new(LinkListColumn::new(
         realm,
         ref_,

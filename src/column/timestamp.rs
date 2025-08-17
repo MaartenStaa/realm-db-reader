@@ -26,7 +26,7 @@ impl TimestampColumn {
         index_ref: Option<RealmRef>,
         attributes: ColumnAttributes,
         name: String,
-    ) -> anyhow::Result<Self> {
+    ) -> crate::RealmResult<Self> {
         let array = Array::from_ref(Arc::clone(&realm), data_ref)?;
         let index = index_ref
             .map(|ref_| Index::from_ref(Arc::clone(&realm), ref_))
@@ -45,7 +45,7 @@ impl TimestampColumn {
 }
 
 impl Column for TimestampColumn {
-    fn get(&self, index: usize) -> anyhow::Result<Value> {
+    fn get(&self, index: usize) -> crate::RealmResult<Value> {
         // Get seconds value
         let seconds = match self.seconds.get(index)? {
             Some(seconds) => seconds,
@@ -65,11 +65,11 @@ impl Column for TimestampColumn {
         Ok(DateTime::from_timestamp(seconds, nanoseconds as u32).into())
     }
 
-    fn is_null(&self, index: usize) -> anyhow::Result<bool> {
+    fn is_null(&self, index: usize) -> crate::RealmResult<bool> {
         self.seconds.is_null(index)
     }
 
-    fn count(&self) -> anyhow::Result<usize> {
+    fn count(&self) -> crate::RealmResult<usize> {
         self.seconds.count()
     }
 
@@ -81,7 +81,7 @@ impl Column for TimestampColumn {
         self.attributes.is_indexed()
     }
 
-    fn get_row_number_by_index(&self, lookup_value: &Value) -> anyhow::Result<Option<usize>> {
+    fn get_row_number_by_index(&self, lookup_value: &Value) -> crate::RealmResult<Option<usize>> {
         let Some(index) = &self.index else {
             panic!("Column {:?} is not indexed", self.name());
         };
@@ -101,7 +101,7 @@ pub(crate) fn create_timestamp_column(
     index_ref: Option<RealmRef>,
     attributes: ColumnAttributes,
     name: String,
-) -> anyhow::Result<Box<dyn Column>> {
+) -> crate::RealmResult<Box<dyn Column>> {
     Ok(Box::new(TimestampColumn::new(
         realm, data_ref, index_ref, attributes, name,
     )?))

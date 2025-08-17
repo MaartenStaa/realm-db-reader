@@ -52,7 +52,7 @@ fn find_child_from_offsets(
     offsets_header: RealmRef,
     width: u8,
     elem_ndx: usize,
-) -> anyhow::Result<(usize, usize)> {
+) -> crate::RealmResult<(usize, usize)> {
     let header = realm.header(offsets_header)?;
     let offsets_data = realm.payload(offsets_header, header.payload_len());
     let offsets_size = header.size;
@@ -72,7 +72,7 @@ fn find_bptree_child(
     realm: Arc<Realm>,
     first_value: u64,
     index: usize,
-) -> anyhow::Result<(usize, usize)> {
+) -> crate::RealmResult<(usize, usize)> {
     if first_value % 2 != 0 {
         // Case 1/2: No offsets array (compact form)
         let elems_per_child = (first_value / 2) as usize;
@@ -97,7 +97,7 @@ pub(crate) fn find_bptree_child_in_payload(
     payload: &[u8],
     width: u8,
     index: usize,
-) -> anyhow::Result<(RealmRef, usize)> {
+) -> crate::RealmResult<(RealmRef, usize)> {
     let first_value = read_array_value(payload, width, 0);
     let (child_index, index_in_child) = find_bptree_child(realm, first_value, index)?;
     let child_ref = RealmRef::new(read_array_value(payload, width, 1 + child_index) as usize);

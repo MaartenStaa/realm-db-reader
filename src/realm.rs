@@ -1,14 +1,13 @@
 use std::sync::Arc;
 use std::{fmt::Debug, path::Path};
 
-use anyhow::bail;
 use byteorder::{ByteOrder, LittleEndian};
 use memmap2::Mmap;
 use tracing::instrument;
 
-use crate::Group;
 use crate::array::{Array, RealmRef};
 use crate::traits::Node;
+use crate::{Group, RealmFileError};
 
 /// The header for a Realm file.
 #[derive(Clone, Copy)]
@@ -36,9 +35,11 @@ impl Header {
     const SIZE: usize = 24;
     const MAGIC: [u8; 4] = *b"T-DB";
 
-    fn parse(buf: &[u8]) -> anyhow::Result<Self> {
+    fn parse(buf: &[u8]) -> crate::RealmResult<Self> {
         if buf.len() < Self::SIZE {
-            bail!("file too small for Realm header");
+            return Err(RealmFileError::InvalidRealmFile {
+                reason: "file too small for Realm header".to_string(),
+            });
         }
 
         let h = Header {
@@ -52,7 +53,9 @@ impl Header {
             flags: buf[23],
         };
         if h.magic != Self::MAGIC {
-            bail!("not a Realm file (magic mismatch)");
+            return Err(RealmFileError::InvalidRealmFile {
+                reason: "not a Realm file (magic mismatch)".to_string(),
+            });
         }
 
         Ok(h)
@@ -101,16 +104,22 @@ impl NodeHeader {
     /// Returns an error if the buffer is too small.
     ///
     /// Panics if the checksum is invalid.
-    pub(crate) fn parse(buf: &[u8]) -> anyhow::Result<Self> {
+    pub(crate) fn parse(buf: &[u8]) -> crate::RealmResult<Self> {
         if buf.len() < Self::SIZE {
-            bail!("node too small");
+            return Err(RealmFileError::InvalidRealmFile {
+                reason: format!("buffer is too small to contain a node ({})", buf.len()),
+            });
         }
 
         let checksum = LittleEndian::read_u32(&buf[0..4]);
         let flags = buf[4];
         let size = ((buf[5] as u32) << 16) | ((buf[6] as u32) << 8) | (buf[7] as u32);
 
-        assert_eq!(checksum, Self::DUMMY_CHECKSUM, "invalid checksum");
+        if checksum != Self::DUMMY_CHECKSUM {
+            return Err(RealmFileError::InvalidRealmFile {
+                reason: "invalid checksum".to_string(),
+            });
+        }
 
         Ok(Self { flags, size })
     }
@@ -185,21 +194,25 @@ impl Realm {
     /// - The file is encrypted.
     /// - The file format version is not supported.
     #[instrument(level = "debug")]
-    pub fn open(path: impl AsRef<Path> + Debug) -> anyhow::Result<Self> {
+    pub fn open(path: impl AsRef<Path> + Debug) -> crate::RealmResult<Self> {
         let file = std::fs::File::open(path)?;
         let mmap = unsafe { Mmap::map(&file)? };
         let hdr = Header::parse(&mmap[..Header::SIZE])?;
 
         if hdr.is_encrypted() {
-            bail!("Encrypted Realm files are not supported");
+            return Err(RealmFileError::Unsupported {
+                reason: "Encrypted Realm files are not supported".to_string(),
+            });
         }
 
         if hdr.file_format_version() != (9, 9) {
-            bail!(
-                "Unsupported Realm format version ({}.{}, supported: 9.9)",
-                hdr.file_format_version().0,
-                hdr.file_format_version().1,
-            );
+            return Err(RealmFileError::Unsupported {
+                reason: format!(
+                    "Unsupported Realm format version ({}.{}, supported: 9.9)",
+                    hdr.file_format_version().0,
+                    hdr.file_format_version().1,
+                ),
+            });
         }
 
         Ok(Realm { mmap, hdr })
@@ -218,7 +231,7 @@ impl Realm {
         self.slice(payload_offset, payload_len)
     }
 
-    pub(crate) fn header(&self, ref_: RealmRef) -> anyhow::Result<NodeHeader> {
+    pub(crate) fn header(&self, ref_: RealmRef) -> crate::RealmResult<NodeHeader> {
         let bytes = self.slice(ref_, NodeHeader::SIZE);
         NodeHeader::parse(bytes)
     }
@@ -229,7 +242,7 @@ impl Realm {
 
     /// Create a reference to the [`Group`] in this Realm database. The
     /// [`Group`] is the main entrypoint for interacting with the tables.
-    pub fn into_group(self) -> anyhow::Result<Group> {
+    pub fn into_group(self) -> crate::RealmResult<Group> {
         let ref_ = self.top_ref();
         let realm = Arc::new(self);
         let array = Array::from_ref(Arc::clone(&realm), ref_)?;
@@ -266,7 +279,7 @@ impl Debug for RealmNode {
 }
 
 impl Node for RealmNode {
-    fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
+    fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> crate::RealmResult<Self> {
         let header = realm.header(ref_)?;
         let cached_payload_len = header.payload_len();
 

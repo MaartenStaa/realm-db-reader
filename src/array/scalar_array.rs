@@ -16,7 +16,7 @@ pub(crate) struct ScalarArray {
 }
 
 impl NodeWithContext<()> for ScalarArray {
-    fn from_ref_with_context(realm: Arc<Realm>, ref_: RealmRef, _: ()) -> anyhow::Result<Self>
+    fn from_ref_with_context(realm: Arc<Realm>, ref_: RealmRef, _: ()) -> crate::RealmResult<Self>
     where
         Self: Sized,
     {
@@ -30,7 +30,7 @@ macro_rules! impl_scalar_bytewise {
     ($scalar:ty) => {
         impl ArrayLike<$scalar> for ScalarArray {
             #[instrument(level = "debug")]
-            fn get(&self, index: usize) -> anyhow::Result<$scalar> {
+            fn get(&self, index: usize) -> crate::RealmResult<$scalar> {
                 assert!(
                     index < self.node.header.size as usize,
                     "Index out of bounds: {index} >= {}",
@@ -49,7 +49,7 @@ macro_rules! impl_scalar_bytewise {
                 ref_: RealmRef,
                 index: usize,
                 _: (),
-            ) -> anyhow::Result<$scalar> {
+            ) -> crate::RealmResult<$scalar> {
                 let header = realm.header(ref_)?;
                 let payload = realm.payload(ref_, header.payload_len());
                 let offset_start = index * std::mem::size_of::<$scalar>();
@@ -59,7 +59,7 @@ macro_rules! impl_scalar_bytewise {
                 Ok(<$scalar>::from_le_bytes(bytes.try_into().unwrap()))
             }
 
-            fn is_null(&self, _: usize) -> anyhow::Result<bool> {
+            fn is_null(&self, _: usize) -> crate::RealmResult<bool> {
                 Ok(false)
             }
 
@@ -74,12 +74,17 @@ impl_scalar_bytewise!(f32);
 impl_scalar_bytewise!(f64);
 
 impl ArrayLike<bool> for ScalarArray {
-    fn get(&self, index: usize) -> anyhow::Result<bool> {
+    fn get(&self, index: usize) -> crate::RealmResult<bool> {
         let value = read_array_value(self.node.payload(), self.node.header.width(), index);
         Ok(value != 0)
     }
 
-    fn get_direct(realm: Arc<Realm>, ref_: RealmRef, index: usize, _: ()) -> anyhow::Result<bool> {
+    fn get_direct(
+        realm: Arc<Realm>,
+        ref_: RealmRef,
+        index: usize,
+        _: (),
+    ) -> crate::RealmResult<bool> {
         let header = realm.header(ref_)?;
         let payload = realm.payload(ref_, header.payload_len());
 
@@ -87,7 +92,7 @@ impl ArrayLike<bool> for ScalarArray {
         Ok(value != 0)
     }
 
-    fn is_null(&self, _: usize) -> anyhow::Result<bool> {
+    fn is_null(&self, _: usize) -> crate::RealmResult<bool> {
         Ok(false)
     }
 
@@ -97,7 +102,7 @@ impl ArrayLike<bool> for ScalarArray {
 }
 
 impl ArrayLike<Option<bool>> for ScalarArray {
-    fn get(&self, index: usize) -> anyhow::Result<Option<bool>> {
+    fn get(&self, index: usize) -> crate::RealmResult<Option<bool>> {
         let value = read_array_value(self.node.payload(), self.node.header.width(), index + 1);
         let null_value = read_array_value(self.node.payload(), self.node.header.width(), 0);
 
@@ -113,7 +118,7 @@ impl ArrayLike<Option<bool>> for ScalarArray {
         ref_: RealmRef,
         index: usize,
         _: (),
-    ) -> anyhow::Result<Option<bool>> {
+    ) -> crate::RealmResult<Option<bool>> {
         let header = realm.header(ref_)?;
         let payload = realm.payload(ref_, header.payload_len());
 
@@ -127,7 +132,7 @@ impl ArrayLike<Option<bool>> for ScalarArray {
         })
     }
 
-    fn is_null(&self, index: usize) -> anyhow::Result<bool> {
+    fn is_null(&self, index: usize) -> crate::RealmResult<bool> {
         let value = read_array_value(self.node.payload(), self.node.header.width(), index + 1);
         let null_value = read_array_value(self.node.payload(), self.node.header.width(), 0);
 

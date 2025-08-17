@@ -3,12 +3,11 @@
 macro_rules! realm_model_field {
     ($struct:ident, $row:ident, $field:ident = $alias:expr) => {
         $row.take($alias)
-            .ok_or(::anyhow::anyhow!(
-                "Missing field {:?} when converting row into {} (remaining fields: {:?}",
-                $alias,
-                stringify!($struct),
-                $row
-            ))?
+            .ok_or_else(|| $crate::ValueError::MissingField {
+                field: $alias,
+                target_type: stringify!($struct),
+                remaining_fields: $row.clone().into_owned(),
+            })?
             .try_into()?
     };
     ($struct:ident, $row:ident, $field:ident) => {
@@ -114,9 +113,9 @@ macro_rules! realm_model_field {
 macro_rules! realm_model {
     ($struct:ident => $($field:ident$(= $alias:expr)?),*$(; $backlinks:ident)?) => {
         impl<'a> ::core::convert::TryFrom<$crate::Row<'a>> for $struct {
-            type Error = ::anyhow::Error;
+            type Error = $crate::ValueError;
 
-            fn try_from(mut row: $crate::Row<'a>) -> ::anyhow::Result<Self> {
+            fn try_from(mut row: $crate::Row<'a>) -> $crate::ValueResult<Self> {
                 $(
                 let $field = $crate::realm_model_field!($struct, row, $field$(= $alias)?);
                 )*

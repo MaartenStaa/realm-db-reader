@@ -16,7 +16,7 @@ pub(crate) struct Index {
 }
 
 impl Node for Index {
-    fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
+    fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> crate::RealmResult<Self> {
         let array = Array::from_ref(Arc::clone(&realm), ref_)?;
         assert!(array.node.header.size >= 1);
 
@@ -36,7 +36,7 @@ impl Index {
     const KEY_SIZE_BITS: u8 = Self::KEY_SIZE * 8;
 
     #[instrument(level = "debug", skip(self))]
-    pub(crate) fn find_first(&self, value: &Value) -> anyhow::Result<Option<usize>> {
+    pub(crate) fn find_first(&self, value: &Value) -> crate::RealmResult<Option<usize>> {
         let value = Self::coerce_to_string(value);
 
         let mut value_offset: usize = 0;

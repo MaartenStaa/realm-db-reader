@@ -1,26 +1,25 @@
-use std::fmt::Debug;
+use std::any::type_name;
+use std::error::Error;
 
-use anyhow::anyhow;
 use chrono::{DateTime, Utc};
 
-use crate::{
-    table::Row,
-    value::{ARRAY_VALUE_KEY, Backlink, Link, Value},
-};
+use crate::error::ValueError;
+use crate::table::Row;
+use crate::value::{ARRAY_VALUE_KEY, Backlink, Link, Value};
 
 macro_rules! value_try_into {
     (Option<$target:ty>, $source:ident) => {
         impl TryFrom<Value> for Option<$target> {
-            type Error = anyhow::Error;
+            type Error = ValueError;
 
             fn try_from(value: Value) -> Result<Self, Self::Error> {
                 match value {
                     Value::$source(val) => Ok(Some(val)),
                     Value::None => Ok(None),
-                    value => Err(anyhow::anyhow!(
-                        "Expected a {} value, found {value:?}",
-                        stringify!($source)
-                    )),
+                    value => Err(ValueError::UnexpectedType {
+                        expected: stringify!($target),
+                        found: value,
+                    }),
                 }
             }
         }
@@ -28,27 +27,28 @@ macro_rules! value_try_into {
 
     ($target:ty, $source:ident) => {
         impl TryFrom<Value> for $target {
-            type Error = anyhow::Error;
+            type Error = ValueError;
 
             fn try_from(value: Value) -> Result<Self, Self::Error> {
                 match value {
                     Value::$source(val) => Ok(val),
-                    table => Err(anyhow::anyhow!(
-                        "Expected a {} value, found {table:?}",
-                        stringify!($source)
-                    )),
+                    value => Err(ValueError::UnexpectedType {
+                        expected: stringify!($target),
+                        found: value,
+                    }),
                 }
             }
         }
 
         impl<'a> TryFrom<Row<'a>> for $target {
-            type Error = anyhow::Error;
+            type Error = ValueError;
 
             fn try_from(mut value: Row<'a>) -> Result<Self, Self::Error> {
                 let Some(value) = value.take(ARRAY_VALUE_KEY) else {
-                    return Err(anyhow!(
-                        "Expected a row with field `{ARRAY_VALUE_KEY}`, found {value:?}",
-                    ));
+                    return Err(ValueError::ExpectedArrayRow {
+                        field: ARRAY_VALUE_KEY,
+                        found: value.into_owned(),
+                    });
                 };
 
                 value.try_into()
@@ -73,23 +73,24 @@ value_try_into!(Option<Link>, Link);
 impl<'a, T> TryFrom<Value> for Vec<T>
 where
     T: TryFrom<Row<'a>>,
-    T::Error: Debug,
+    T::Error: Error + 'static,
 {
-    type Error = anyhow::Error;
+    type Error = ValueError;
 
     fn try_from(value: Value) -> Result<Self, Self::Error> {
         match value {
             Value::Table(rows) => {
                 let mut result = Vec::with_capacity(rows.len());
                 for row in rows {
-                    result.push(row.try_into().map_err(|e| {
-                        anyhow!("Failed to convert value in row to Vec<T>: {e:?}",)
+                    result.push(row.try_into().map_err(|e| ValueError::VecConversionError {
+                        element_type: type_name::<T>(),
+                        source: Box::new(e),
                     })?);
                 }
 
                 Ok(result)
             }
-            value => Err(anyhow!("Expected a Table value, found {value:?}")),
+            value => Err(ValueError::ExpectedTable { found: value }),
         }
     }
 }

@@ -30,7 +30,7 @@ impl<T: ColumnType> NodeWithContext<T::LeafContext> for BpTree<T> {
         realm: Arc<Realm>,
         ref_: RealmRef,
         context: T::LeafContext,
-    ) -> anyhow::Result<Self> {
+    ) -> crate::RealmResult<Self> {
         let root = Array::from_ref(realm, ref_)?;
 
         // Pre-cache root as leaf
@@ -48,7 +48,7 @@ impl<T: ColumnType> NodeWithContext<T::LeafContext> for BpTree<T> {
 
 impl<T: ColumnType> BpTree<T> {
     #[instrument(level = "debug")]
-    pub(crate) fn get(&self, index: usize) -> anyhow::Result<T::Value> {
+    pub(crate) fn get(&self, index: usize) -> crate::RealmResult<T::Value> {
         if self.root_is_leaf() {
             return self.root_as_leaf.get(index);
         }
@@ -63,7 +63,7 @@ impl<T: ColumnType> BpTree<T> {
     }
 
     #[instrument(level = "debug")]
-    pub(crate) fn is_null(&self, index: usize) -> anyhow::Result<bool> {
+    pub(crate) fn is_null(&self, index: usize) -> crate::RealmResult<bool> {
         if self.root_is_leaf() {
             let leaf = T::LeafType::from_ref_with_context(
                 self.root.node.realm.clone(),
@@ -85,7 +85,7 @@ impl<T: ColumnType> BpTree<T> {
     }
 
     #[instrument(level = "debug")]
-    pub(crate) fn count(&self) -> anyhow::Result<usize> {
+    pub(crate) fn count(&self) -> crate::RealmResult<usize> {
         Ok(if self.root_is_leaf() {
             self.root_as_leaf.size()
         } else {
@@ -124,7 +124,10 @@ impl<'a> BpTreeNode<'a> {
         Self { root }
     }
 
-    pub(crate) fn get_bptree_leaf(&self, mut index: usize) -> anyhow::Result<(RealmRef, usize)> {
+    pub(crate) fn get_bptree_leaf(
+        &self,
+        mut index: usize,
+    ) -> crate::RealmResult<(RealmRef, usize)> {
         let mut width = self.root.node.header.width();
         let mut payload = self.root.node.payload();
 

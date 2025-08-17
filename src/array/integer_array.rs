@@ -16,7 +16,7 @@ pub(crate) struct IntegerArray {
 }
 
 impl NodeWithContext<()> for IntegerArray {
-    fn from_ref_with_context(realm: Arc<Realm>, ref_: RealmRef, _: ()) -> anyhow::Result<Self>
+    fn from_ref_with_context(realm: Arc<Realm>, ref_: RealmRef, _: ()) -> crate::RealmResult<Self>
     where
         Self: Sized,
     {
@@ -27,11 +27,11 @@ impl NodeWithContext<()> for IntegerArray {
 }
 
 impl ArrayLike<u64> for IntegerArray {
-    fn get(&self, index: usize) -> anyhow::Result<u64> {
+    fn get(&self, index: usize) -> crate::RealmResult<u64> {
         Ok(self.array.get(index))
     }
 
-    fn get_direct(realm: Arc<Realm>, ref_: RealmRef, index: usize, _: ()) -> anyhow::Result<u64> {
+    fn get_direct(realm: Arc<Realm>, ref_: RealmRef, index: usize, _: ()) -> crate::RealmResult<u64> {
         let header = realm.header(ref_)?;
         let width = header.width();
 
@@ -42,7 +42,7 @@ impl ArrayLike<u64> for IntegerArray {
         ))
     }
 
-    fn is_null(&self, _: usize) -> anyhow::Result<bool> {
+    fn is_null(&self, _: usize) -> crate::RealmResult<bool> {
         Ok(false)
     }
 
@@ -52,13 +52,13 @@ impl ArrayLike<u64> for IntegerArray {
 }
 
 impl ArrayLike<i64> for IntegerArray {
-    fn get(&self, index: usize) -> anyhow::Result<i64> {
+    fn get(&self, index: usize) -> crate::RealmResult<i64> {
         let value = self.array.get(index);
 
         Ok(i64::from_le_bytes(value.to_le_bytes()))
     }
 
-    fn get_direct(realm: Arc<Realm>, ref_: RealmRef, index: usize, _: ()) -> anyhow::Result<i64> {
+    fn get_direct(realm: Arc<Realm>, ref_: RealmRef, index: usize, _: ()) -> crate::RealmResult<i64> {
         let header = realm.header(ref_)?;
         let width = header.width();
 
@@ -66,7 +66,7 @@ impl ArrayLike<i64> for IntegerArray {
         Ok(i64::from_le_bytes(value.to_le_bytes()))
     }
 
-    fn is_null(&self, _: usize) -> anyhow::Result<bool> {
+    fn is_null(&self, _: usize) -> crate::RealmResult<bool> {
         Ok(false)
     }
 
@@ -76,7 +76,7 @@ impl ArrayLike<i64> for IntegerArray {
 }
 
 impl ArrayLike<Option<i64>> for IntegerArray {
-    fn get(&self, index: usize) -> anyhow::Result<Option<i64>> {
+    fn get(&self, index: usize) -> crate::RealmResult<Option<i64>> {
         let value = self.array.get(index + 1);
         let null_value = self.array.get(0);
 
@@ -92,7 +92,7 @@ impl ArrayLike<Option<i64>> for IntegerArray {
         ref_: RealmRef,
         index: usize,
         _: (),
-    ) -> anyhow::Result<Option<i64>> {
+    ) -> crate::RealmResult<Option<i64>> {
         let header = realm.header(ref_)?;
         let width = header.width();
 
@@ -106,7 +106,7 @@ impl ArrayLike<Option<i64>> for IntegerArray {
         })
     }
 
-    fn is_null(&self, index: usize) -> anyhow::Result<bool> {
+    fn is_null(&self, index: usize) -> crate::RealmResult<bool> {
         let value = self.array.get(index + 1);
         let null_value = self.array.get(0);
 

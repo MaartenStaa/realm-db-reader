@@ -1,6 +1,7 @@
 use tracing::{instrument, warn};
 
 use crate::array::{Array, ArrayStringShort};
+use crate::error::TableError;
 use crate::table::Table;
 use crate::traits::ArrayLike;
 
@@ -29,7 +30,7 @@ pub struct Group {
 
 impl Group {
     #[instrument(level = "debug")]
-    pub(crate) fn build(array: Array) -> anyhow::Result<Self> {
+    pub(crate) fn build(array: Array) -> crate::RealmResult<Self> {
         let table_names = {
             let array: ArrayStringShort = array.get_node(0)?.unwrap();
             array.get_all()?
@@ -49,7 +50,7 @@ impl Group {
     ///
     /// Panics if the table number is out of bounds.
     #[instrument(level = "debug", skip(self), fields(table_names = ?self.table_names))]
-    pub fn get_table(&self, table_number: usize) -> anyhow::Result<Table> {
+    pub fn get_table(&self, table_number: usize) -> crate::TableResult<Table> {
         let table_array = self.tables_array.get_node(table_number)?.unwrap();
 
         let table = Table::build(table_array, table_number)?;
@@ -61,12 +62,14 @@ impl Group {
     ///
     /// Panics if the table name is not found.
     #[instrument(level = "debug", skip(self), fields(table_names = ?self.table_names))]
-    pub fn get_table_by_name(&self, name: &str) -> anyhow::Result<Table> {
+    pub fn get_table_by_name(&self, name: &str) -> crate::TableResult<Table> {
         let table_number = self
             .table_names
             .iter()
             .position(|n| n == name)
-            .ok_or(anyhow::anyhow!("No table with name {name}"))?;
+            .ok_or_else(|| TableError::TableNotFound {
+                name: name.to_string(),
+            })?;
 
         self.get_table(table_number)
     }

@@ -21,7 +21,7 @@ pub(crate) fn create_double_column(
     data_ref: RealmRef,
     attributes: ColumnAttributes,
     name: String,
-) -> anyhow::Result<Box<dyn Column>> {
+) -> crate::RealmResult<Box<dyn Column>> {
     Ok(Box::new(DoubleColumn::new(
         realm,
         data_ref,

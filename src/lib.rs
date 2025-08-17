@@ -85,6 +85,7 @@
 
 mod array;
 mod column;
+mod error;
 mod group;
 mod index;
 mod model;
@@ -97,6 +98,7 @@ mod value;
 
 // Export public types.
 pub use column::Column;
+pub use error::{RealmFileError, RealmResult, TableError, TableResult, ValueError, ValueResult};
 pub use group::Group;
 pub use realm::Realm;
 pub use table::{Row, Table};

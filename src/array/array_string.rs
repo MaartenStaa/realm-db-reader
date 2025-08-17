@@ -29,7 +29,7 @@ where
     SmallBlobsArray: ArrayLike<T>,
     LongBlobsArray: ArrayLike<T>,
 {
-    fn from_ref_with_context(realm: Arc<Realm>, ref_: RealmRef, _: ()) -> anyhow::Result<Self>
+    fn from_ref_with_context(realm: Arc<Realm>, ref_: RealmRef, _: ()) -> crate::RealmResult<Self>
     where
         Self: Sized,
     {
@@ -45,7 +45,7 @@ where
 
 impl ArrayLike<String> for ArrayString<String> {
     #[instrument(level = "debug")]
-    fn get(&self, index: usize) -> anyhow::Result<String> {
+    fn get(&self, index: usize) -> crate::RealmResult<String> {
         self.inner.get(index)
     }
 
@@ -55,7 +55,7 @@ impl ArrayLike<String> for ArrayString<String> {
         ref_: RealmRef,
         index: usize,
         context: (),
-    ) -> anyhow::Result<String> {
+    ) -> crate::RealmResult<String> {
         let header = realm.header(ref_)?;
 
         match (header.has_refs(), header.context_flag()) {
@@ -65,7 +65,7 @@ impl ArrayLike<String> for ArrayString<String> {
         }
     }
 
-    fn is_null(&self, index: usize) -> anyhow::Result<bool> {
+    fn is_null(&self, index: usize) -> crate::RealmResult<bool> {
         self.inner.is_null(index)
     }
 
@@ -76,7 +76,7 @@ impl ArrayLike<String> for ArrayString<String> {
 
 impl ArrayLike<Option<String>> for ArrayString<Option<String>> {
     #[instrument(level = "debug")]
-    fn get(&self, index: usize) -> anyhow::Result<Option<String>> {
+    fn get(&self, index: usize) -> crate::RealmResult<Option<String>> {
         self.inner.get(index)
     }
 
@@ -86,7 +86,7 @@ impl ArrayLike<Option<String>> for ArrayString<Option<String>> {
         ref_: RealmRef,
         index: usize,
         context: (),
-    ) -> anyhow::Result<Option<String>> {
+    ) -> crate::RealmResult<Option<String>> {
         let header = realm.header(ref_)?;
 
         match (header.has_refs(), header.context_flag()) {
@@ -96,7 +96,7 @@ impl ArrayLike<Option<String>> for ArrayString<Option<String>> {
         }
     }
 
-    fn is_null(&self, index: usize) -> anyhow::Result<bool> {
+    fn is_null(&self, index: usize) -> crate::RealmResult<bool> {
         self.inner.is_null(index)
     }
 
@@ -116,7 +116,7 @@ where
         header: &NodeHeader,
         realm: Arc<Realm>,
         ref_: RealmRef,
-    ) -> anyhow::Result<Box<dyn ArrayLike<T>>> {
+    ) -> crate::RealmResult<Box<dyn ArrayLike<T>>> {
         Ok(match (header.has_refs(), header.context_flag()) {
             (false, _) => Box::new(ArrayStringShort::from_ref(realm, ref_)?),
             (true, false) => Box::new(SmallBlobsArray::from_ref(realm, ref_)?),

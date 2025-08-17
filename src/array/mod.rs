@@ -75,7 +75,7 @@ pub(crate) struct Array {
 }
 
 impl Node for Array {
-    fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Self> {
+    fn from_ref(realm: Arc<Realm>, ref_: RealmRef) -> crate::RealmResult<Self> {
         let node = RealmNode::from_ref(Arc::clone(&realm), ref_)?;
         let width = node.header.width();
 
@@ -132,7 +132,7 @@ impl Array {
     }
 
     #[instrument(level = "debug")]
-    pub(crate) fn get_node<N>(&self, index: usize) -> anyhow::Result<Option<N>>
+    pub(crate) fn get_node<N>(&self, index: usize) -> crate::RealmResult<Option<N>>
     where
         N: Node,
     {

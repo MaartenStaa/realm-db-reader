@@ -20,7 +20,7 @@ pub(crate) fn create_bool_null_column(
     index_ref: Option<RealmRef>,
     attributes: ColumnAttributes,
     name: String,
-) -> anyhow::Result<Box<dyn Column>> {
+) -> crate::RealmResult<Box<dyn Column>> {
     Ok(Box::new(BoolNullColumn::new(
         realm,
         data_ref,

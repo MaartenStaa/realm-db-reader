@@ -23,7 +23,7 @@ impl StringColumn {
         index_ref: Option<RealmRef>,
         attributes: ColumnAttributes,
         name: String,
-    ) -> anyhow::Result<Self> {
+    ) -> crate::RealmResult<Self> {
         let root = Array::from_ref(Arc::clone(&realm), data_ref)?;
         let index = index_ref
             .map(|ref_| Index::from_ref(realm, ref_))
@@ -40,7 +40,7 @@ impl StringColumn {
 
 impl Column for StringColumn {
     /// Get the value for this column for the row with the given index.
-    fn get(&self, index: usize) -> anyhow::Result<Value> {
+    fn get(&self, index: usize) -> crate::RealmResult<Value> {
         if self.root_is_leaf() {
             return Ok(if self.nullable() {
                 ArrayString::<Option<String>>::get_inner(
@@ -84,12 +84,12 @@ impl Column for StringColumn {
         })
     }
 
-    fn is_null(&self, index: usize) -> anyhow::Result<bool> {
+    fn is_null(&self, index: usize) -> crate::RealmResult<bool> {
         Ok(self.nullable() && self.get(index)?.is_none())
     }
 
     /// Get the total number of values in this column.
-    fn count(&self) -> anyhow::Result<usize> {
+    fn count(&self) -> crate::RealmResult<usize> {
         if self.root_is_leaf() {
             let long_strings = self.root.node.header.has_refs();
             if !long_strings {
@@ -129,7 +129,7 @@ impl Column for StringColumn {
         self.attributes.is_indexed()
     }
 
-    fn get_row_number_by_index(&self, lookup_value: &Value) -> anyhow::Result<Option<usize>> {
+    fn get_row_number_by_index(&self, lookup_value: &Value) -> crate::RealmResult<Option<usize>> {
         let Some(index) = &self.index else {
             panic!("Column {:?} is not indexed", self.name());
         };
@@ -155,7 +155,7 @@ pub(crate) fn create_string_column(
     index_ref: Option<RealmRef>,
     attributes: ColumnAttributes,
     name: String,
-) -> anyhow::Result<Box<dyn Column>> {
+) -> crate::RealmResult<Box<dyn Column>> {
     Ok(Box::new(StringColumn::new(
         realm, data_ref, index_ref, attributes, name,
     )?))

@@ -31,7 +31,7 @@ impl NodeWithContext<LinkColumnContext> for LinkLeaf {
         realm: Arc<Realm>,
         ref_: RealmRef,
         context: LinkColumnContext,
-    ) -> anyhow::Result<Self>
+    ) -> crate::RealmResult<Self>
     where
         Self: Sized,
     {
@@ -41,7 +41,7 @@ impl NodeWithContext<LinkColumnContext> for LinkLeaf {
 }
 
 impl ArrayLike<Option<Link>, LinkColumnContext> for LinkLeaf {
-    fn get(&self, index: usize) -> anyhow::Result<Option<Link>> {
+    fn get(&self, index: usize) -> crate::RealmResult<Option<Link>> {
         let value = self.root.get(index);
         if value == 0 {
             return Ok(None);
@@ -58,7 +58,7 @@ impl ArrayLike<Option<Link>, LinkColumnContext> for LinkLeaf {
         ref_: RealmRef,
         index: usize,
         context: LinkColumnContext,
-    ) -> anyhow::Result<Option<Link>> {
+    ) -> crate::RealmResult<Option<Link>> {
         let header = realm.header(ref_)?;
         let payload = realm.payload(ref_, header.payload_len());
 
@@ -71,7 +71,7 @@ impl ArrayLike<Option<Link>, LinkColumnContext> for LinkLeaf {
         }
     }
 
-    fn is_null(&self, index: usize) -> anyhow::Result<bool> {
+    fn is_null(&self, index: usize) -> crate::RealmResult<bool> {
         Ok(self.root.get(index) == 0)
     }
 
@@ -87,7 +87,7 @@ pub(crate) fn create_link_column(
     attributes: ColumnAttributes,
     target_table_index: usize,
     name: String,
-) -> anyhow::Result<Box<dyn Column>> {
+) -> crate::RealmResult<Box<dyn Column>> {
     Ok(Box::new(LinkColumn::new(
         realm,
         ref_,

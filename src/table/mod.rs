@@ -2,11 +2,12 @@ mod column;
 mod header;
 mod row;
 
-use anyhow::{Ok, anyhow, bail};
 use tracing::{debug, instrument};
 
+use crate::RealmFileError;
 use crate::array::Array;
 use crate::column::Column;
+use crate::error::TableError;
 pub(crate) use crate::table::column::ColumnAttributes;
 use crate::table::header::TableHeader;
 pub use crate::table::row::Row;
@@ -23,7 +24,7 @@ pub struct Table {
 impl Table {
     /// Construct a new table instance, from the given Realm array.
     #[instrument(level = "debug")]
-    pub(crate) fn build(array: Array, table_number: usize) -> anyhow::Result<Self> {
+    pub(crate) fn build(array: Array, table_number: usize) -> crate::RealmResult<Self> {
         let header_array = array.get_node(0)?.unwrap();
         let data_array = array.get_node(1)?.unwrap();
 
@@ -38,7 +39,7 @@ impl Table {
         header_array: &Array,
         data_array: Array,
         table_number: usize,
-    ) -> anyhow::Result<Self> {
+    ) -> crate::RealmResult<Self> {
         let header = TableHeader::build(header_array, &data_array)?;
 
         let result = Self {
@@ -74,17 +75,19 @@ impl Table {
 
     /// Get the number of rows in the table.
     #[instrument(level = "debug", skip(self), fields(header = ?self.header))]
-    pub fn row_count(&self) -> anyhow::Result<usize> {
-        let first_column = self
-            .header
-            .get_column(0)
-            .ok_or_else(|| anyhow::anyhow!("No column at index 0: can't load row count"))?;
+    pub fn row_count(&self) -> crate::RealmResult<usize> {
+        let first_column =
+            self.header
+                .get_column(0)
+                .ok_or_else(|| RealmFileError::InvalidRealmFile {
+                    reason: "No column at index 0: can't load row count".to_string(),
+                })?;
         first_column.count()
     }
 
     /// Get the row with the given number (starting with 0).
     #[instrument(level = "debug", skip(self), fields(header = ?self.header))]
-    pub fn get_row<'a>(&'a self, row_number: usize) -> anyhow::Result<Row<'a>> {
+    pub fn get_row<'a>(&'a self, row_number: usize) -> crate::RealmResult<Row<'a>> {
         let values = self.load_row(row_number)?;
 
         Ok(Row::new(
@@ -100,7 +103,7 @@ impl Table {
 
     /// Load the values for the row with the given number (starting with 0).
     #[instrument(level = "debug", skip(self), fields(header = ?self.header))]
-    fn load_row(&self, row_number: usize) -> anyhow::Result<Vec<Value>> {
+    fn load_row(&self, row_number: usize) -> crate::RealmResult<Vec<Value>> {
         let column_count = self.header.column_count();
         let mut values = Vec::with_capacity(column_count);
         for column_number in 0..column_count {
@@ -123,23 +126,25 @@ impl Table {
         &self,
         indexed_column_name: &str,
         value: &Value,
-    ) -> anyhow::Result<Option<usize>> {
+    ) -> crate::TableResult<Option<usize>> {
         // Find the column index for the given column name
         let column_spec = self
             .header
             .get_columns()
             .iter()
             .find(|col| col.name() == Some(indexed_column_name))
-            .ok_or_else(|| anyhow!("Column not found: {}", indexed_column_name))?;
+            .ok_or_else(|| TableError::ColumnNotFound {
+                name: indexed_column_name.to_string(),
+            })?;
 
         if !column_spec.is_indexed() {
-            bail!(
-                "Column '{}' is not indexed, cannot perform lookup",
-                indexed_column_name
-            );
+            return Err(TableError::ColumnNotIndexed {
+                name: indexed_column_name.to_string(),
+            });
         }
 
-        column_spec.get_row_number_by_index(value)
+        let result = column_spec.get_row_number_by_index(value)?;
+        Ok(result)
     }
 
     /// Find and load the row with the given value in an indexed column.
@@ -153,19 +158,20 @@ impl Table {
         &'a self,
         indexed_column_name: &str,
         value: &Value,
-    ) -> anyhow::Result<Option<Row<'a>>> {
+    ) -> crate::TableResult<Option<Row<'a>>> {
         let Some(row_number) =
             self.find_row_number_from_indexed_column(indexed_column_name, value)?
         else {
             return Ok(None);
         };
 
-        self.get_row(row_number).map(Some)
+        let row = self.get_row(row_number)?;
+        Ok(Some(row))
     }
 
     /// Get all rows in the table.
     #[instrument(level = "debug", skip(self), fields(header = ?self.header))]
-    pub fn get_rows<'a>(&'a self) -> anyhow::Result<Vec<Row<'a>>> {
+    pub fn get_rows<'a>(&'a self) -> crate::RealmResult<Vec<Row<'a>>> {
         let row_count = self.row_count()?;
         let mut rows = Vec::with_capacity(row_count);
 
@@ -180,7 +186,7 @@ impl Table {
     ///
     /// Panics if the column or row number is out of range.
     #[instrument(level = "debug", skip(self))]
-    fn load_column(&self, column_number: usize, row_number: usize) -> anyhow::Result<Value> {
+    fn load_column(&self, column_number: usize, row_number: usize) -> crate::RealmResult<Value> {
         let column_spec = self
             .header
             .get_column(column_number)

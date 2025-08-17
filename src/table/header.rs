@@ -1,9 +1,9 @@
 use std::fmt::Debug;
 use std::sync::Arc;
 
-use anyhow::{anyhow, bail};
 use tracing::{debug, info, instrument, warn};
 
+use crate::RealmFileError;
 use crate::array::{Array, ArrayStringShort, FromU64, IntegerArray, RefOrTaggedValue};
 use crate::column::{
     Column, create_backlink_column, create_bool_column, create_bool_null_column,
@@ -31,7 +31,7 @@ impl TableHeader {
         mut column_names: Vec<String>,
         column_attributes: Vec<ColumnAttributes>,
         sub_spec_array: Option<Array>,
-    ) -> anyhow::Result<Self> {
+    ) -> crate::RealmResult<Self> {
         // NOTE: The same does not apply for column names, as backlinks don't have a name.
         assert_eq!(
             column_types.len(),
@@ -48,20 +48,22 @@ impl TableHeader {
 
         for (i, column_type) in column_types.into_iter().enumerate() {
             let attributes = column_attributes[i];
-            let data_ref = data_array
-                .get_ref(data_array_index)
-                .ok_or_else(|| anyhow!("failed to find data entry for column {i}"))?;
+            let data_ref = data_array.get_ref(data_array_index).ok_or_else(|| {
+                RealmFileError::InvalidRealmFile {
+                    reason: format!("failed to find data entry for column {i}"),
+                }
+            })?;
 
             debug!(
                 "column type {i}: {column_type:?} has data array index {data_array_index} with ref {data_ref:?}"
             );
 
             let index_ref = if attributes.is_indexed() {
-                Some(
-                    data_array
-                        .get_ref(data_array_index + 1)
-                        .ok_or_else(|| anyhow!("failed to find index entry for column {i}"))?,
-                )
+                Some(data_array.get_ref(data_array_index + 1).ok_or_else(|| {
+                    RealmFileError::InvalidRealmFile {
+                        reason: format!("failed to find index entry for column {i}"),
+                    }
+                })?)
             } else {
                 None
             };
@@ -117,7 +119,9 @@ impl TableHeader {
                 ColumnType::Table => {
                     let other_table_header_ref = sub_spec_array
                         .as_ref()
-                        .ok_or(anyhow::anyhow!("Expected sub-spec array for table column"))?
+                        .ok_or_else(|| RealmFileError::InvalidRealmFile {
+                            reason: "Expected sub-spec array for table column".to_string(),
+                        })?
                         .get_ref(sub_spec_index)
                         .unwrap();
                     let name = column_names.pop().unwrap();
@@ -154,9 +158,11 @@ impl TableHeader {
                 ColumnType::Reserved4 => todo!("Implement Reserved4 column creation"),
                 ColumnType::Link => {
                     let target_table_index = Self::get_sub_spec_index_value(
-                        sub_spec_array
-                            .as_ref()
-                            .ok_or(anyhow::anyhow!("Expected sub-spec array for link column"))?,
+                        sub_spec_array.as_ref().ok_or_else(|| {
+                            RealmFileError::InvalidRealmFile {
+                                reason: "Expected sub-spec array for link column".to_string(),
+                            }
+                        })?,
                         sub_spec_index,
                     )?;
 
@@ -172,7 +178,9 @@ impl TableHeader {
                     let target_table_index = Self::get_sub_spec_index_value(
                         sub_spec_array
                             .as_ref()
-                            .ok_or(anyhow::anyhow!("Expected sub-spec array for link column"))?,
+                            .ok_or(RealmFileError::InvalidRealmFile {
+                                reason: "Expected sub-spec array for link column".to_string(),
+                            })?,
                         sub_spec_index,
                     )?;
 
@@ -185,9 +193,12 @@ impl TableHeader {
                     )?
                 }
                 ColumnType::BackLink => {
-                    let sub_spec_array = sub_spec_array.as_ref().ok_or(anyhow::anyhow!(
-                        "Expected sub-spec array for backlink column"
-                    ))?;
+                    let sub_spec_array =
+                        sub_spec_array
+                            .as_ref()
+                            .ok_or(RealmFileError::InvalidRealmFile {
+                                reason: "Expected sub-spec array for backlink column".to_string(),
+                            })?;
                     let target_table_index =
                         Self::get_sub_spec_index_value(sub_spec_array, sub_spec_index)?;
                     let target_table_column_index =
@@ -225,13 +236,17 @@ impl TableHeader {
     fn get_sub_spec_index_value(
         sub_spec_array: &Array,
         sub_spec_index: usize,
-    ) -> anyhow::Result<usize> {
+    ) -> crate::RealmResult<usize> {
         match sub_spec_array.get_ref_or_tagged_value(sub_spec_index) {
-            Some(RefOrTaggedValue::Ref(_)) => bail!("Expected tagged integer for link column"),
+            Some(RefOrTaggedValue::Ref(_)) => Err(RealmFileError::InvalidRealmFile {
+                reason: "Expected tagged integer for link column".to_string(),
+            }),
             Some(RefOrTaggedValue::TaggedValue(target_table_index)) => {
                 Ok(target_table_index as usize)
             }
-            _ => bail!("Expected tagged integer for link column"),
+            _ => Err(RealmFileError::InvalidRealmFile {
+                reason: "Expected tagged integer for link column".to_string(),
+            }),
         }
     }
 
@@ -250,7 +265,7 @@ impl TableHeader {
 
 impl TableHeader {
     #[instrument(level = "debug")]
-    pub(crate) fn build(header_array: &Array, data_array: &Array) -> anyhow::Result<Self> {
+    pub(crate) fn build(header_array: &Array, data_array: &Array) -> crate::RealmResult<Self> {
         let column_types = {
             let array: IntegerArray = header_array.get_node(0)?.unwrap();
             array

@@ -32,7 +32,7 @@ impl NodeWithContext<BacklinkContext> for BacklinkArray {
         realm: Arc<Realm>,
         ref_: RealmRef,
         context: BacklinkContext,
-    ) -> anyhow::Result<Self>
+    ) -> crate::RealmResult<Self>
     where
         Self: Sized,
     {
@@ -44,7 +44,7 @@ impl NodeWithContext<BacklinkContext> for BacklinkArray {
 }
 
 impl ArrayLike<Option<Backlink>, BacklinkContext> for BacklinkArray {
-    fn get(&self, index: usize) -> anyhow::Result<Option<Backlink>> {
+    fn get(&self, index: usize) -> crate::RealmResult<Option<Backlink>> {
         let Some(ref_or_tagged) = self.root.get_ref_or_tagged_value(index) else {
             return Ok(None);
         };
@@ -61,7 +61,7 @@ impl ArrayLike<Option<Backlink>, BacklinkContext> for BacklinkArray {
         ref_: RealmRef,
         index: usize,
         context: BacklinkContext,
-    ) -> anyhow::Result<Option<Backlink>> {
+    ) -> crate::RealmResult<Option<Backlink>> {
         let header = realm.header(ref_)?;
         let payload = realm.payload(ref_, header.payload_len());
 
@@ -77,7 +77,7 @@ impl ArrayLike<Option<Backlink>, BacklinkContext> for BacklinkArray {
         )?))
     }
 
-    fn is_null(&self, _: usize) -> anyhow::Result<bool> {
+    fn is_null(&self, _: usize) -> crate::RealmResult<bool> {
         Ok(false)
     }
 
@@ -91,7 +91,7 @@ impl BacklinkArray {
         realm: &Arc<Realm>,
         value: RefOrTaggedValue,
         context: BacklinkContext,
-    ) -> anyhow::Result<Backlink> {
+    ) -> crate::RealmResult<Backlink> {
         match value {
             RefOrTaggedValue::Ref(ref_) => {
                 let backlink_list = IntegerArray::from_ref(Arc::clone(realm), ref_)?;
@@ -122,7 +122,7 @@ pub(crate) fn create_backlink_column(
     attributes: ColumnAttributes,
     target_table_number: usize,
     target_table_column_number: usize,
-) -> anyhow::Result<Box<dyn Column>> {
+) -> crate::RealmResult<Box<dyn Column>> {
     Ok(Box::new(BacklinkColumn::new(
         realm,
         ref_,

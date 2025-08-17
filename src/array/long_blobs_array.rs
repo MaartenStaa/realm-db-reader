@@ -1,7 +1,6 @@
 use std::fmt::Debug;
 use std::sync::Arc;
 
-use anyhow::Ok;
 use tracing::{instrument, warn};
 
 use crate::array::{Array, RealmRef};
@@ -16,7 +15,7 @@ pub(crate) struct LongBlobsArray {
 
 impl NodeWithContext<()> for LongBlobsArray {
     #[instrument(level = "debug")]
-    fn from_ref_with_context(realm: Arc<Realm>, ref_: RealmRef, _: ()) -> anyhow::Result<Self>
+    fn from_ref_with_context(realm: Arc<Realm>, ref_: RealmRef, _: ()) -> crate::RealmResult<Self>
     where
         Self: Sized,
     {
@@ -36,7 +35,7 @@ impl NodeWithContext<()> for LongBlobsArray {
 }
 
 impl LongBlobsArray {
-    fn element_is_null(&self, index: usize) -> anyhow::Result<bool> {
+    fn element_is_null(&self, index: usize) -> crate::RealmResult<bool> {
         Ok(self
             .array
             .get_node::<RealmNode>(index)?
@@ -44,7 +43,7 @@ impl LongBlobsArray {
             .unwrap_or(true))
     }
 
-    fn item_bytes(realm: Arc<Realm>, ref_: RealmRef) -> anyhow::Result<Option<Vec<u8>>> {
+    fn item_bytes(realm: Arc<Realm>, ref_: RealmRef) -> crate::RealmResult<Option<Vec<u8>>> {
         let item: RealmNode = RealmNode::from_ref(Arc::clone(&realm), ref_)?;
         let payload = item.payload();
         let size = item.header.size as usize;
@@ -67,7 +66,7 @@ impl LongBlobsArray {
 
 impl ArrayLike<Option<Vec<u8>>> for LongBlobsArray {
     #[instrument(level = "debug")]
-    fn get(&self, index: usize) -> anyhow::Result<Option<Vec<u8>>> {
+    fn get(&self, index: usize) -> crate::RealmResult<Option<Vec<u8>>> {
         let Some(ref_) = self.array.get_ref(index) else {
             warn!("get: index={index} returned NULL");
             return Ok(None);
@@ -81,7 +80,7 @@ impl ArrayLike<Option<Vec<u8>>> for LongBlobsArray {
         ref_: RealmRef,
         index: usize,
         _: (),
-    ) -> anyhow::Result<Option<Vec<u8>>> {
+    ) -> crate::RealmResult<Option<Vec<u8>>> {
         let header = realm.header(ref_)?;
 
         assert!(
@@ -102,7 +101,7 @@ impl ArrayLike<Option<Vec<u8>>> for LongBlobsArray {
         Self::item_bytes(Arc::clone(&realm), item_ref)
     }
 
-    fn is_null(&self, index: usize) -> anyhow::Result<bool> {
+    fn is_null(&self, index: usize) -> crate::RealmResult<bool> {
         self.element_is_null(index)
     }
 
@@ -112,7 +111,7 @@ impl ArrayLike<Option<Vec<u8>>> for LongBlobsArray {
 }
 
 impl ArrayLike<Option<String>> for LongBlobsArray {
-    fn get(&self, index: usize) -> anyhow::Result<Option<String>> {
+    fn get(&self, index: usize) -> crate::RealmResult<Option<String>> {
         let bytes = <Self as ArrayLike<Option<Vec<u8>>>>::get(self, index)?;
 
         Ok(bytes.map(utils::string_from_bytes))
@@ -123,7 +122,7 @@ impl ArrayLike<Option<String>> for LongBlobsArray {
         ref_: RealmRef,
         index: usize,
         context: (),
-    ) -> anyhow::Result<Option<String>>
+    ) -> crate::RealmResult<Option<String>>
     where
         Self: Sized,
     {
@@ -132,7 +131,7 @@ impl ArrayLike<Option<String>> for LongBlobsArray {
         Ok(bytes.map(utils::string_from_bytes))
     }
 
-    fn is_null(&self, index: usize) -> anyhow::Result<bool> {
+    fn is_null(&self, index: usize) -> crate::RealmResult<bool> {
         self.element_is_null(index)
     }
 
@@ -142,7 +141,7 @@ impl ArrayLike<Option<String>> for LongBlobsArray {
 }
 
 impl ArrayLike<String> for LongBlobsArray {
-    fn get(&self, index: usize) -> anyhow::Result<String> {
+    fn get(&self, index: usize) -> crate::RealmResult<String> {
         <Self as ArrayLike<Option<String>>>::get(self, index).map(|s| s.unwrap_or_default())
     }
 
@@ -151,7 +150,7 @@ impl ArrayLike<String> for LongBlobsArray {
         ref_: RealmRef,
         index: usize,
         context: (),
-    ) -> anyhow::Result<String>
+    ) -> crate::RealmResult<String>
     where
         Self: Sized,
     {
@@ -159,7 +158,7 @@ impl ArrayLike<String> for LongBlobsArray {
             .map(|s| s.unwrap_or_default())
     }
 
-    fn is_null(&self, index: usize) -> anyhow::Result<bool> {
+    fn is_null(&self, index: usize) -> crate::RealmResult<bool> {
         self.element_is_null(index)
     }
 

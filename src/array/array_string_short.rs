@@ -13,7 +13,7 @@ pub(crate) struct ArrayStringShort {
 }
 
 impl NodeWithContext<()> for ArrayStringShort {
-    fn from_ref_with_context(realm: Arc<Realm>, ref_: RealmRef, _: ()) -> anyhow::Result<Self>
+    fn from_ref_with_context(realm: Arc<Realm>, ref_: RealmRef, _: ()) -> crate::RealmResult<Self>
     where
         Self: Sized,
     {
@@ -25,7 +25,7 @@ impl NodeWithContext<()> for ArrayStringShort {
 
 impl ArrayLike<Option<String>> for ArrayStringShort {
     #[instrument(level = "debug")]
-    fn get(&self, index: usize) -> anyhow::Result<Option<String>> {
+    fn get(&self, index: usize) -> crate::RealmResult<Option<String>> {
         Ok(Self::get_static(&self.node, index).map(|s| s.to_string()))
     }
 
@@ -34,13 +34,13 @@ impl ArrayLike<Option<String>> for ArrayStringShort {
         ref_: RealmRef,
         index: usize,
         _: (),
-    ) -> anyhow::Result<Option<String>> {
+    ) -> crate::RealmResult<Option<String>> {
         let node = RealmNode::from_ref(realm, ref_)?;
 
         Ok(Self::get_static(&node, index).map(|s| s.to_string()))
     }
 
-    fn is_null(&self, index: usize) -> anyhow::Result<bool> {
+    fn is_null(&self, index: usize) -> crate::RealmResult<bool> {
         let width = self.node.header.width();
         if width == 0 {
             return Ok(true);
@@ -61,7 +61,7 @@ impl ArrayLike<Option<String>> for ArrayStringShort {
 }
 
 impl ArrayLike<String> for ArrayStringShort {
-    fn get(&self, index: usize) -> anyhow::Result<String> {
+    fn get(&self, index: usize) -> crate::RealmResult<String> {
         <Self as ArrayLike<Option<String>>>::get(self, index).map(|s| s.unwrap_or_default())
     }
 
@@ -70,12 +70,12 @@ impl ArrayLike<String> for ArrayStringShort {
         ref_: RealmRef,
         index: usize,
         context: (),
-    ) -> anyhow::Result<String> {
+    ) -> crate::RealmResult<String> {
         <Self as ArrayLike<Option<String>>>::get_direct(realm, ref_, index, context)
             .map(|s| s.unwrap_or_default())
     }
 
-    fn is_null(&self, _: usize) -> anyhow::Result<bool> {
+    fn is_null(&self, _: usize) -> crate::RealmResult<bool> {
         // Implementing for `String`, so we always return false.
         Ok(false)
     }

@@ -38,14 +38,14 @@ mod timestamp;
 /// A column for a table.
 pub trait Column: Debug + Send {
     /// Get the value for this column for the row with the given index.
-    fn get(&self, index: usize) -> anyhow::Result<Value>;
+    fn get(&self, index: usize) -> crate::RealmResult<Value>;
 
     /// Check whether the value at the given index is null. Note that some
     /// column types are never null, see [`Value`] for details.
-    fn is_null(&self, index: usize) -> anyhow::Result<bool>;
+    fn is_null(&self, index: usize) -> crate::RealmResult<bool>;
 
     /// Get the total number of values in this column.
-    fn count(&self) -> anyhow::Result<usize>;
+    fn count(&self) -> crate::RealmResult<usize>;
 
     /// Get whether this column is nullable. Note that some column types are
     /// never null, see [`Value`] for details.
@@ -59,7 +59,7 @@ pub trait Column: Debug + Send {
     /// Look up a value for this column in the index.
     ///
     /// Panics if this column is not indexed.
-    fn get_row_number_by_index(&self, lookup_value: &Value) -> anyhow::Result<Option<usize>>;
+    fn get_row_number_by_index(&self, lookup_value: &Value) -> crate::RealmResult<Option<usize>>;
 
     /// Get the name of this column. All columns except backlinks are named.
     fn name(&self) -> Option<&str>;
@@ -95,15 +95,15 @@ where
     <T as ColumnType>::LeafContext: Send,
     <T as ColumnType>::LeafType: Send,
 {
-    fn get(&self, index: usize) -> anyhow::Result<Value> {
+    fn get(&self, index: usize) -> crate::RealmResult<Value> {
         Ok(Value::from(self.tree.get(index)?))
     }
 
-    fn is_null(&self, index: usize) -> anyhow::Result<bool> {
+    fn is_null(&self, index: usize) -> crate::RealmResult<bool> {
         self.tree.is_null(index)
     }
 
-    fn count(&self) -> anyhow::Result<usize> {
+    fn count(&self) -> crate::RealmResult<usize> {
         self.tree.count()
     }
 
@@ -115,7 +115,7 @@ where
         self.attributes.is_indexed()
     }
 
-    fn get_row_number_by_index(&self, lookup_value: &Value) -> anyhow::Result<Option<usize>> {
+    fn get_row_number_by_index(&self, lookup_value: &Value) -> crate::RealmResult<Option<usize>> {
         let Some(index) = &self.index else {
             panic!("Column {:?} is not indexed", self.name());
         };
@@ -136,7 +136,7 @@ impl<T: ColumnType> ColumnImpl<T> {
         attributes: ColumnAttributes,
         name: Option<String>,
         context: T::LeafContext,
-    ) -> anyhow::Result<Self> {
+    ) -> crate::RealmResult<Self> {
         let tree = BpTree::from_ref_with_context(Arc::clone(&realm), data_ref, context)?;
         let index = index_ref
             .map(|ref_| Index::from_ref(realm, ref_))

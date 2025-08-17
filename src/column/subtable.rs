@@ -47,7 +47,7 @@ impl NodeWithContext<SubtableContext> for SubtableArrayLeaf {
         realm: Arc<Realm>,
         ref_: RealmRef,
         context: SubtableContext,
-    ) -> anyhow::Result<Self>
+    ) -> crate::RealmResult<Self>
     where
         Self: Sized,
     {
@@ -59,7 +59,7 @@ impl NodeWithContext<SubtableContext> for SubtableArrayLeaf {
 }
 
 impl ArrayLike<Option<Vec<Row<'static>>>, SubtableContext> for SubtableArrayLeaf {
-    fn get(&self, index: usize) -> anyhow::Result<Option<Vec<Row<'static>>>> {
+    fn get(&self, index: usize) -> crate::RealmResult<Option<Vec<Row<'static>>>> {
         let Some(data_array) = self.root.get_node(index)? else {
             return Ok(None);
         };
@@ -78,7 +78,7 @@ impl ArrayLike<Option<Vec<Row<'static>>>, SubtableContext> for SubtableArrayLeaf
         ref_: RealmRef,
         index: usize,
         context: SubtableContext,
-    ) -> anyhow::Result<Option<Vec<Row<'static>>>> {
+    ) -> crate::RealmResult<Option<Vec<Row<'static>>>> {
         let header = realm.header(ref_)?;
         let payload = realm.payload(ref_, header.payload_len());
 
@@ -100,7 +100,7 @@ impl ArrayLike<Option<Vec<Row<'static>>>, SubtableContext> for SubtableArrayLeaf
         ))
     }
 
-    fn is_null(&self, index: usize) -> anyhow::Result<bool> {
+    fn is_null(&self, index: usize) -> crate::RealmResult<bool> {
         Ok(self.root.get_ref(index).is_none())
     }
 
@@ -116,7 +116,7 @@ pub(crate) fn create_subtable_column(
     data_ref: RealmRef,
     attributes: ColumnAttributes,
     name: String,
-) -> anyhow::Result<Box<dyn Column>> {
+) -> crate::RealmResult<Box<dyn Column>> {
     Ok(Box::new(SubtableColumn::new(
         realm,
         data_ref,
