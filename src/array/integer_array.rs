@@ -31,7 +31,12 @@ impl ArrayLike<u64> for IntegerArray {
         Ok(self.array.get(index))
     }
 
-    fn get_direct(realm: Arc<Realm>, ref_: RealmRef, index: usize, _: ()) -> crate::RealmResult<u64> {
+    fn get_direct(
+        realm: Arc<Realm>,
+        ref_: RealmRef,
+        index: usize,
+        _: (),
+    ) -> crate::RealmResult<u64> {
         let header = realm.header(ref_)?;
         let width = header.width();
 
@@ -58,7 +63,12 @@ impl ArrayLike<i64> for IntegerArray {
         Ok(i64::from_le_bytes(value.to_le_bytes()))
     }
 
-    fn get_direct(realm: Arc<Realm>, ref_: RealmRef, index: usize, _: ()) -> crate::RealmResult<i64> {
+    fn get_direct(
+        realm: Arc<Realm>,
+        ref_: RealmRef,
+        index: usize,
+        _: (),
+    ) -> crate::RealmResult<i64> {
         let header = realm.header(ref_)?;
         let width = header.width();
 

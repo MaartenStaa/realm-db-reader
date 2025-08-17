@@ -28,7 +28,11 @@ where
 /// Trait for nodes in the realm, holding a context. A node is a struct that can
 /// be created from a reference to its realm and reference.
 pub(crate) trait NodeWithContext<T> {
-    fn from_ref_with_context(realm: Arc<Realm>, ref_: RealmRef, context: T) -> crate::RealmResult<Self>
+    fn from_ref_with_context(
+        realm: Arc<Realm>,
+        ref_: RealmRef,
+        context: T,
+    ) -> crate::RealmResult<Self>
     where
         Self: Sized;
 }
